@@ -23,6 +23,9 @@ const SPRITE_SIZE = 16; // The actual sprite dimensions (16x16 pixels)
 const GRID_SIZE = 32; // How large each pixel appears on screen (24x24 pixels)
 const CANVAS_SIZE = SPRITE_SIZE * GRID_SIZE; // Total canvas size on screen (384x384)
 
+const CORNER_RADIUS = 0.1;
+const CORNER_QUALITY = 2;
+
 const PREVIEW_SIZE = 240;
 const PREVIEW_SMALL_SIZE = 96;
 const SIDEBAR_X = 402;
@@ -405,26 +408,26 @@ pub fn main() !void {
         }
 
         // ——— Canvas border with rounded corners ———
-        rl.drawRectangleRoundedLinesEx(rl.Rectangle{ .x = PIVOT_TL_X - 4, .y = PIVOT_TL_Y - 4, .width = CANVAS_SIZE + 8, .height = CANVAS_SIZE + 8 }, 0.02, 8, 3, rl.getColor(0x4A5568FF));
+        rl.drawRectangleRoundedLinesEx(rl.Rectangle{ .x = PIVOT_TL_X - 4, .y = PIVOT_TL_Y - 4, .width = CANVAS_SIZE + 8, .height = CANVAS_SIZE + 8 }, 0.02, CORNER_QUALITY, 3, rl.getColor(0x4A5568FF));
 
         // ——— Right sidebar ———
         var sx: i32 = PIVOT_TR_X - SIDEBAR_X;
         var sy: i32 = PIVOT_TR_Y;
 
         // Large preview with shadow and rounded corners
-        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx + 4), .y = @floatFromInt(sy + 4), .width = PREVIEW_SIZE, .height = PREVIEW_SIZE }, 0.08, 8, DB16.BLACK);
-        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx), .y = @floatFromInt(sy), .width = PREVIEW_SIZE, .height = PREVIEW_SIZE }, 0.08, 8, rl.getColor(0x718096FF));
+        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx + 4), .y = @floatFromInt(sy + 4), .width = PREVIEW_SIZE, .height = PREVIEW_SIZE }, CORNER_RADIUS, CORNER_QUALITY, DB16.BLACK);
+        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx), .y = @floatFromInt(sy), .width = PREVIEW_SIZE, .height = PREVIEW_SIZE }, CORNER_RADIUS, CORNER_QUALITY, rl.getColor(0x718096FF));
         drawPreview(&canvas, sx + 8, sy + 8, PREVIEW_SIZE - 16);
 
-        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx + 8 + PREVIEW_SIZE), .y = @floatFromInt(sy + 4), .width = PREVIEW_SMALL_SIZE, .height = PREVIEW_SMALL_SIZE }, 0.08, 8, DB16.BLACK);
-        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx + PREVIEW_SIZE + 4), .y = @floatFromInt(sy), .width = PREVIEW_SMALL_SIZE, .height = PREVIEW_SMALL_SIZE }, 0.08, 8, rl.getColor(0x718096FF));
+        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx + 8 + PREVIEW_SIZE), .y = @floatFromInt(sy + 4), .width = PREVIEW_SMALL_SIZE, .height = PREVIEW_SMALL_SIZE }, CORNER_RADIUS, CORNER_QUALITY, DB16.BLACK);
+        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(sx + PREVIEW_SIZE + 4), .y = @floatFromInt(sy), .width = PREVIEW_SMALL_SIZE, .height = PREVIEW_SMALL_SIZE }, CORNER_RADIUS, CORNER_QUALITY, rl.getColor(0x718096FF));
         drawPreview(&canvas, sx + 12 + PREVIEW_SIZE, sy + 8, PREVIEW_SMALL_SIZE - 16);
 
         // Star indicator in top right
         const star_x = PIVOT_BR_X - 40;
         const star_y = PIVOT_TR_Y;
-        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(star_x + 4), .y = @floatFromInt(star_y + 4), .width = 36, .height = 36 }, 0.2, 8, DB16.BLACK);
-        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(star_x), .y = @floatFromInt(star_y), .width = 36, .height = 36 }, 0.2, 8, DB16.WHITE);
+        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(star_x + 4), .y = @floatFromInt(star_y + 4), .width = 36, .height = 36 }, CORNER_RADIUS, CORNER_QUALITY, DB16.BLACK);
+        rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(star_x), .y = @floatFromInt(star_y), .width = 36, .height = 36 }, CORNER_RADIUS, CORNER_QUALITY, DB16.WHITE);
         rl.drawText("★", star_x + 9, star_y + 4, 20, rl.Color.white);
 
         // Tool buttons section
@@ -437,10 +440,10 @@ pub fn main() !void {
         inline for (0..tool_labels.len) |i| {
             const tx = sx + @as(i32, @intCast(i * (48 + 8)));
             // Shadow
-            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(tx + 2), .y = @floatFromInt(sy + 2), .width = 48, .height = 48 }, 0.2, 8, rl.getColor(0x00000044));
+            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(tx + 2), .y = @floatFromInt(sy + 2), .width = 48, .height = 48 }, CORNER_RADIUS, CORNER_QUALITY, rl.getColor(0x00000044));
             // Button (highlight active tool, dim delete always since it's keyboard-only, highlight save if modified)
             const btn_color = if (i == 0 and palette_modified) rl.getColor(0xF6AD55FF) else if (i == 2 and active_tool == 0) rl.getColor(0x5A8A9AFF) else if (i == 3 and active_tool == 1) rl.getColor(0x5A8A9AFF) else if (i == 1) rl.getColor(0x2A2E38FF) else rl.getColor(0x4A5568FF);
-            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(tx), .y = @floatFromInt(sy), .width = 48, .height = 48 }, 0.2, 8, btn_color);
+            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(tx), .y = @floatFromInt(sy), .width = 48, .height = 48 }, CORNER_RADIUS, CORNER_QUALITY, btn_color);
 
             // Add indicator dot for unsaved changes
             if (i == 0 and palette_modified) {
@@ -475,14 +478,14 @@ pub fn main() !void {
             const pos: math.IVec2 = math.IVec2.init(sx + xoff, sy);
 
             // Draw shadow for depth
-            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(pos.x + 2), .y = @floatFromInt(pos.y + 2), .width = 44, .height = 44 }, 0.15, 8, rl.getColor(0x00000044));
+            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(pos.x + 2), .y = @floatFromInt(pos.y + 2), .width = 44, .height = 44 }, CORNER_RADIUS, CORNER_QUALITY, rl.getColor(0x00000044));
 
             // Draw background for swatch
             const bg_color = if (active_color == index) DB16.WHITE else rl.getColor(0x4A5568FF);
-            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(pos.x - 2), .y = @floatFromInt(pos.y - 2), .width = 44, .height = 44 }, 0.15, 8, bg_color);
+            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(pos.x - 2), .y = @floatFromInt(pos.y - 2), .width = 44, .height = 44 }, CORNER_RADIUS, CORNER_QUALITY, bg_color);
 
             // Draw the color swatch
-            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(pos.x), .y = @floatFromInt(pos.y), .width = 40, .height = 40 }, 0.12, 8, getColorFromIndex(db16_idx));
+            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(pos.x), .y = @floatFromInt(pos.y), .width = 40, .height = 40 }, CORNER_RADIUS, CORNER_QUALITY, getColorFromIndex(db16_idx));
         }
         sy += 60;
 
@@ -497,7 +500,7 @@ pub fn main() !void {
             const py = sy + y * 48;
 
             // Draw shadow
-            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(px + 4), .y = @floatFromInt(py + 4), .width = 40, .height = 40 }, 0.15, 8, DB16.BLACK);
+            rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(px + 4), .y = @floatFromInt(py + 4), .width = 40, .height = 40 }, CORNER_RADIUS, CORNER_QUALITY, DB16.BLACK);
 
             // Check if this DB16 color is in current palette
             var is_in_palette = false;
@@ -510,7 +513,7 @@ pub fn main() !void {
 
             // Draw background if selected
             if (is_in_palette) {
-                rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(px - 2), .y = @floatFromInt(py - 2), .width = 44, .height = 44 }, 0.15, 8, DB16.WHITE);
+                rl.drawRectangleRounded(rl.Rectangle{ .x = @floatFromInt(px - 2), .y = @floatFromInt(py - 2), .width = 44, .height = 44 }, CORNER_RADIUS, CORNER_QUALITY, DB16.WHITE);
             }
 
             // Draw the color
