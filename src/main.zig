@@ -432,7 +432,7 @@ pub fn main() !void {
         sy = sy + PREVIEW_SIZE + 24;
 
         // Draw tool icons
-        const tool_labels = [_][:0]const u8{ "SAVE", "[D]", "PEN", "FILL", "OUT", "IN" };
+        const tool_labels = [_][:0]const u8{ "SAVE", "[D]el", "PEN", "FILL", "OUT", "IN" };
 
         inline for (0..tool_labels.len) |i| {
             const tx = sx + @as(i32, @intCast(i * (48 + 8)));
