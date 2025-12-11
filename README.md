@@ -20,13 +20,17 @@ zig build run
 
 ![Windows vs Linux](win-linux.png)
 
-Linux
+Host Linux -> Linux.
 ```
-zig build -Doptimize=ReleaseSmall upx
+zig build \
+  -Doptimize=ReleaseSmall \
+  upx
 ```
 
-Windows
+Host Linux -> Windows
 ``` 
-zig build -Dtarget=x86_64-windows -Doptimize=ReleaseSmall
-upx zig-out/bin/ray_zig_engine.exe
+zig build \
+  -Dtarget=x86_64-windows \
+  -Doptimize=ReleaseSmall \
+  upx
 ```

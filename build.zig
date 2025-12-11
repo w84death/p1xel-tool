@@ -32,7 +32,11 @@ pub fn build(b: *std.Build) void {
     if (b.args) |args| run_cmd.addArgs(args);
 
     const upx_step = b.step("upx", "Compress binary");
-    const install_path = b.getInstallPath(.bin, "ray_zig_engine");
+    const binary_name = if (target.result.os.tag == .windows)
+        "ray_zig_engine.exe"
+    else
+        "ray_zig_engine";
+    const install_path = b.getInstallPath(.bin, binary_name);
     const compress = b.addSystemCommand(&[_][]const u8{
         "upx",
         "--best",

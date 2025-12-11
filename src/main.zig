@@ -4,6 +4,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const math = @import("math.zig");
 const DB16 = @import("palette.zig").DB16;
+
 const THE_NAME = "P1Xel Editor";
 const SCREEN_W = 1024;
 const SCREEN_H = 768;
@@ -30,11 +31,11 @@ const SIDEBAR_W = SCREEN_W - SIDEBAR_X - 20;
 
 var active_color: u8 = 1; // currently selected color index (0–15)
 var current_palette = [4]u8{ 0, 1, 2, 3 }; // the 4 colors this sprite uses
-var active_tool: u8 = 0; // 0=pencil, 1=eraser, etc.
+var active_tool: u8 = 0; // TODO: Implement tool selection
 
 fn getColorFromIndex(index: u8) rl.Color {
     return switch (index) {
-        0 => DB16.BLACK,
+        0 => DB16.BLACK, // Transparent if first color in palette
         1 => DB16.PURPLE,
         2 => DB16.RED,
         3 => DB16.BROWN,
