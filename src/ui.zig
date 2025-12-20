@@ -1,47 +1,41 @@
 const std = @import("std");
 const rl = @import("raylib");
-// const raygui = @import("raylib").raygui;
 const palette = @import("palette.zig");
 const DB16 = palette.DB16;
 const Math = @import("math.zig");
-const IVec2 = Math.IVec2;
+const CONF = @import("config.zig").CONF;
 
-const SCREEN_W = 1024;
-const SCREEN_H = 640;
-
-const DEFAULT_FONT_SIZE = 20;
-const CORNER_RADIUS = 0.1;
-const CORNER_QUALITY = 2;
-
-const PIVOT_PADDING = 24;
-const P_CENTER = 0;
-const P_TOPLEFT = 1;
-const P_TOPRIGHT = 2;
-const P_BOTTOMLEFT = 3;
-const P_BOTTOMRIGHT = 4;
+pub const PIVOTS = struct {
+    pub const PADDING = 24;
+    pub const CENTER = 0;
+    pub const TOP_LEFT = 1;
+    pub const TOP_RIGHT = 2;
+    pub const BOTTOM_LEFT = 3;
+    pub const BOTTOM_RIGHT = 4;
+};
 
 pub const UI = struct {
     app_name: [:0]const u8,
     bg_color: rl.Color,
     primary_color: rl.Color,
-    pivots: [5]IVec2,
+    pivots: [5]rl.Vector2,
     pub fn init(title: [:0]const u8, bg_color: rl.Color, primary_color: rl.Color) UI {
         return UI{
             .app_name = title,
             .bg_color = bg_color,
             .primary_color = primary_color,
             .pivots = .{
-                IVec2.init(SCREEN_W / 2, SCREEN_H / 2),
-                IVec2.init(PIVOT_PADDING, PIVOT_PADDING),
-                IVec2.init(SCREEN_W - PIVOT_PADDING, PIVOT_PADDING),
-                IVec2.init(PIVOT_PADDING, SCREEN_H - PIVOT_PADDING),
-                IVec2.init(SCREEN_W - PIVOT_PADDING, SCREEN_H - PIVOT_PADDING),
+                rl.Vector2.init(CONF.SCREEN_W / 2, CONF.SCREEN_H / 2),
+                rl.Vector2.init(PIVOTS.PADDING, PIVOTS.PADDING),
+                rl.Vector2.init(CONF.SCREEN_W - PIVOTS.PADDING, PIVOTS.PADDING),
+                rl.Vector2.init(PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
+                rl.Vector2.init(CONF.SCREEN_W - PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
             },
         };
     }
 
     pub fn createWindow(self: UI) void {
-        rl.initWindow(SCREEN_W, SCREEN_H, self.app_name);
+        rl.initWindow(CONF.SCREEN_W, CONF.SCREEN_H, self.app_name);
     }
 
     pub fn closeWindow(self: UI) void {
@@ -49,33 +43,24 @@ pub const UI = struct {
         rl.closeWindow();
     }
 
-    pub fn button(x: i32, y: i32, width: i32, height: i32, label: [:0]const u8, color: rl.Color, mouse: rl.Vector2) bool {
-        const fx: f32 = @floatFromInt(x);
-        const fy: f32 = @floatFromInt(y);
+    pub fn button(self: UI, x: f32, y: f32, width: i32, height: i32, label: [:0]const u8, color: rl.Color, mouse: rl.Vector2) bool {
+        _ = self;
+        const ix: i32 = @intFromFloat(x);
+        const iy: i32 = @intFromFloat(y);
         const fw: f32 = @floatFromInt(width);
         const fh: f32 = @floatFromInt(height);
-        const rec = rl.Rectangle.init(fx, fy, fw, fh);
-        const rec_shadow = rl.Rectangle.init(fx + 3.0, fy + 3.0, fw, fh);
+        const rec = rl.Rectangle.init(x, y, fw, fh);
+        const rec_shadow = rl.Rectangle.init(x + 3.0, y + 3.0, fw, fh);
         const hover = rl.checkCollisionPointRec(mouse, rec);
         const c = if (hover) DB16.YELLOW else DB16.WHITE;
-        const text_x: i32 = x + @divFloor(width - rl.measureText(label, DEFAULT_FONT_SIZE), 2);
-        const text_y: i32 = y + @divFloor(height - DEFAULT_FONT_SIZE, 2);
+        const text_x: i32 = ix + @divFloor(width - rl.measureText(label, CONF.DEFAULT_FONT_SIZE), 2);
+        const text_y: i32 = iy + @divFloor(height - CONF.DEFAULT_FONT_SIZE, 2);
 
-        rl.drawRectangleRounded(rec_shadow, CORNER_RADIUS, CORNER_QUALITY, DB16.BLACK);
-        rl.drawRectangleRounded(rec, CORNER_RADIUS, CORNER_QUALITY, color);
-        rl.drawRectangleRoundedLinesEx(rec, CORNER_RADIUS, CORNER_QUALITY, 2, c);
-        rl.drawText(label, text_x, text_y, DEFAULT_FONT_SIZE, c);
+        rl.drawRectangleRounded(rec_shadow, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.BLACK);
+        rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, color);
+        rl.drawRectangleRoundedLinesEx(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, c);
+        rl.drawText(label, text_x, text_y, CONF.DEFAULT_FONT_SIZE, c);
 
         return rl.isMouseButtonPressed(rl.MouseButton.left) and hover;
-    }
-
-    pub fn demo(self: UI) void {
-        const mouse = rl.getMousePosition();
-        rl.clearBackground(DB16.NAVY_BLUE);
-        rl.drawText(self.app_name, self.pivots[P_CENTER].x - @divFloor(rl.measureText(self.app_name, DEFAULT_FONT_SIZE), 2), self.pivots[P_CENTER].y, DEFAULT_FONT_SIZE, self.primary_color);
-        if (button(self.pivots[P_TOPLEFT].x, self.pivots[P_TOPLEFT].y, 200, 32, "Open Tileset", DB16.BLUE, mouse)) {
-            rl.drawText("Clicked Blue", self.pivots[P_CENTER].x, self.pivots[P_CENTER].y + 24, DEFAULT_FONT_SIZE, self.primary_color);
-        }
-        _ = button(self.pivots[P_TOPRIGHT].x - 100, self.pivots[P_TOPRIGHT].y, 100, 32, "Quit", DB16.RED, mouse);
     }
 };

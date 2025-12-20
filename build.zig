@@ -1,4 +1,7 @@
 const std = @import("std");
+const filename = "p1xel_editor";
+const filename_win = "p1xel_editor";
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -8,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const exe = b.addExecutable(.{
-        .name = "ray_zig_engine",
+        .name = filename,
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
@@ -33,9 +36,9 @@ pub fn build(b: *std.Build) void {
 
     const upx_step = b.step("upx", "Compress binary");
     const binary_name = if (target.result.os.tag == .windows)
-        "ray_zig_engine.exe"
+        filename_win
     else
-        "ray_zig_engine";
+        filename;
     const install_path = b.getInstallPath(.bin, binary_name);
     const compress = b.addSystemCommand(&[_][]const u8{
         "upx",

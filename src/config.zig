@@ -1,15 +1,13 @@
-const THE_NAME = "P1Xel Editor";
-const SCREEN_W = 1024;
-const SCREEN_H = 640;
-
-const PIVOT_PADDING = 24;
-const PIVOT_TL_X = PIVOT_PADDING;
-const PIVOT_TL_Y = PIVOT_PADDING;
-const PIVOT_TR_X = SCREEN_W - PIVOT_PADDING;
-const PIVOT_TR_Y = PIVOT_PADDING;
-const PIVOT_BL_X = PIVOT_PADDING;
-const PIVOT_BL_Y = SCREEN_H - PIVOT_PADDING;
-const PIVOT_BR_X = SCREEN_W - PIVOT_PADDING;
-const PIVOT_BR_Y = SCREEN_H - PIVOT_PADDING;
-
-const MAX_PALETTES = 100;
+pub const CONF = struct {
+    pub const THE_NAME = "P1Xel Editor";
+    pub const SCREEN_W = 1024;
+    pub const SCREEN_H = 768;
+    pub const PALETTES_FILE = "palettes.dat";
+    pub const MAX_PALETTES = 100;
+    pub const DEFAULT_FONT_SIZE = 20;
+    pub const CORNER_RADIUS = 0.1;
+    pub const CORNER_QUALITY = 2;
+    pub const SPRITE_SIZE = 16; // The actual sprite dimensions (16x16 pixels)
+    pub const GRID_SIZE = 32; // How large each pixel appears on screen (24x24 pixels)
+    pub const CANVAS_SIZE = SPRITE_SIZE * GRID_SIZE; // Total canvas size on screen (384x384)
+};

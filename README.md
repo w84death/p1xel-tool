@@ -3,9 +3,11 @@
 ## About
 Sprite editor for my MS-DOS game. Made in Zig and Raylib.
 
-pre-alpha
+### Prototype
+![prealpha](media/prototype.png)
 
-![prealpha](media/screenshot5.png)
+### Pre-alpha0
+![prealpha](media/pre-alpha0.png)
 
 ## Run
 ```
@@ -28,12 +30,3 @@ zig build \
   -Doptimize=ReleaseSmall \
   upx
 ```
-
-## Usage
-
-![prealpha](media/screenshot4.png)
-
-### Palette Switching
-![prealpha](media/screenshot1.png)
-![prealpha](media/screenshot2.png)
-![prealpha](media/screenshot3.png)
