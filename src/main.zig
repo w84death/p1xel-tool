@@ -1,6 +1,5 @@
 const std = @import("std");
 const rl = @import("raylib");
-const math = @import("math.zig");
 const Ui = @import("ui.zig").UI;
 const PIVOTS = @import("ui.zig").PIVOTS;
 const DB16 = @import("palette.zig").DB16;

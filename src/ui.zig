@@ -2,7 +2,6 @@ const std = @import("std");
 const rl = @import("raylib");
 const palette = @import("palette.zig");
 const DB16 = palette.DB16;
-const Math = @import("math.zig");
 const CONF = @import("config.zig").CONF;
 
 pub const PIVOTS = struct {
