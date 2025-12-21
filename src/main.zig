@@ -14,7 +14,7 @@ pub fn main() !void {
     const ui = Ui.init(CONF.THE_NAME, DB16.NAVY_BLUE, DB16.WHITE, DB16.BLUE);
     var sm = StateMachine.init(State.main_menu);
     const menu = Menu.init(ui, &sm);
-    const edit = Edit.init(ui, &sm);
+    var edit = Edit.init(ui, &sm);
     const about = About.init(ui, &sm);
 
     ui.createWindow();
@@ -36,6 +36,8 @@ pub fn main() !void {
                 menu.draw(mouse);
             },
             State.editor => {
+                edit.handleKeyboard();
+                edit.handleMouse(mouse);
                 edit.draw(mouse);
             },
             State.about => {

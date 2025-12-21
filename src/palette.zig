@@ -22,7 +22,7 @@ pub const DB16 = struct {
 // Palette struct holds 4 color indices from DB16
 pub const Palette = [4]u8;
 
-fn getColorFromIndex(index: u8) rl.Color {
+pub fn getColorFromIndex(index: u8) rl.Color {
     return switch (index) {
         0 => DB16.BLACK, // Transparent if first color in palette
         1 => DB16.DEEP_PURPLE,
