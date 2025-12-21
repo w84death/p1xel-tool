@@ -1,3 +1,6 @@
+const rl = @import("raylib");
+const DB16 = @import("palette.zig").DB16;
+
 pub const CONF = struct {
     pub const VERSION = "pre-alpha0";
     pub const THE_NAME = "P1Xel Editor";
@@ -11,4 +14,7 @@ pub const CONF = struct {
     pub const SPRITE_SIZE = 16; // The actual sprite dimensions (16x16 pixels)
     pub const GRID_SIZE = 32; // How large each pixel appears on screen (24x24 pixels)
     pub const CANVAS_SIZE = SPRITE_SIZE * GRID_SIZE; // Total canvas size on screen (384x384)
+    pub const CANVAS_FRAME_SIZE = 16;
+    pub const CANVAS_X = 0;
+    pub const CANVAS_Y = 64;
 };
