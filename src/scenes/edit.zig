@@ -23,9 +23,8 @@ pub const Edit = struct {
     active_color: u8,
     current_palette_index: usize,
     current_palette: [4]u8,
-
-    left_drawing: bool,
-    right_drawing: bool,
+    wait: bool,
+    ask_for_clear: bool,
 
     pub fn init(ui: Ui, sm: *StateMachine) Edit {
         const ix: i32 = @intFromFloat(ui.pivots[PIVOTS.TOP_LEFT].x + CONF.CANVAS_X);
@@ -44,11 +43,12 @@ pub const Edit = struct {
             .active_color = 1,
             .current_palette_index = 0,
             .current_palette = [4]u8{ 0, 3, 7, 15 },
-            .left_drawing = false,
-            .right_drawing = false,
+            .wait = false,
+            .ask_for_clear = false,
         };
     }
     pub fn handleKeyboard(self: *Edit) void {
+        if (self.wait) return;
         const key = rl.getKeyPressed();
         switch (key) {
             rl.KeyboardKey.one => self.active_color = 0,
@@ -59,6 +59,8 @@ pub const Edit = struct {
         }
     }
     pub fn handleMouse(self: *Edit, mouse: rl.Vector2) void {
+        if (self.wait) return;
+
         if (self.sm.fresh and rl.isMouseButtonReleased(rl.MouseButton.left)) {
             self.sm.fresh = false;
         } else if (self.sm.fresh) {
@@ -90,7 +92,8 @@ pub const Edit = struct {
         }
 
         if (self.ui.button(nav.x + 88, nav.y, 160, 32, "Clear canvas", DB16.RED, mouse)) {
-            self.clearCanvas();
+            self.wait = true;
+            self.ask_for_clear = true;
         }
         if (self.ui.button(nav.x + 88 + 160 + 8, nav.y, 80, 32, "Save", DB16.GREEN, mouse)) {}
 
@@ -133,6 +136,18 @@ pub const Edit = struct {
 
         self.draw_preview(px, py, 4, DB16.BLACK);
         self.draw_preview(px + dw + 8, py, 4, DB16.WHITE);
+
+        if (self.ask_for_clear) {
+            const result = self.ui.yesNoPopup("Clear canvas?", mouse);
+            if (result) |res| {
+                if (res) {
+                    self.clearCanvas();
+                }
+                self.ask_for_clear = false;
+                self.wait = false;
+                self.sm.fresh = true;
+            }
+        }
     }
 
     fn draw_preview(self: Edit, x: i32, y: i32, down_scale: i32, background: rl.Color) void {

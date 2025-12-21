@@ -64,4 +64,36 @@ pub const UI = struct {
 
         return rl.isMouseButtonPressed(rl.MouseButton.left) and hover;
     }
+
+    pub fn yesNoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2) ?bool {
+        const text_width: f32 = @floatFromInt(rl.measureText(message, CONF.DEFAULT_FONT_SIZE));
+        const popup_size = rl.Vector2.init(text_width + 128, 128);
+        const center = rl.Vector2.init(self.pivots[PIVOTS.CENTER].x, self.pivots[PIVOTS.CENTER].y);
+        const popup_corner = rl.Vector2.init(center.x - @divFloor(popup_size.x, 2), center.y - @divFloor(popup_size.y, 2));
+        const rec = rl.Rectangle.init(popup_corner.x, popup_corner.y, popup_size.x, popup_size.y);
+        const rec_shadow = rl.Rectangle.init(popup_corner.x + 8, popup_corner.y + 8, popup_size.x, popup_size.y);
+
+        // Draw shadow and main popup background
+        rl.drawRectangleRounded(rec_shadow, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.BLACK);
+        rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.DARK_GRAY);
+        rl.drawRectangleRoundedLines(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.RED);
+        // Draw message text (centered horizontally, near top)
+        const text_x = popup_corner.x + @divFloor(popup_size.x - text_width, 2);
+        const text_y = popup_corner.y + 24.0;
+        rl.drawText(message, @intFromFloat(text_x), @intFromFloat(text_y), CONF.DEFAULT_FONT_SIZE, DB16.WHITE);
+
+        const button_y = popup_corner.y + popup_size.y - 50.0;
+        const button_height = 32;
+        const button_width = 80;
+        const no_x = popup_corner.x + 24;
+        const yes_x = popup_corner.x + popup_size.x - 80 - 24;
+
+        const yes_clicked = self.button(yes_x, button_y, button_width, button_height, "Yes", DB16.GREEN, mouse);
+        if (yes_clicked) return true;
+
+        const no_clicked = self.button(no_x, button_y, button_width, button_height, "No", DB16.RED, mouse);
+        if (no_clicked) return false;
+
+        return null;
+    }
 };
