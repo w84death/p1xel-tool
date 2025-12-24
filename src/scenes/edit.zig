@@ -35,6 +35,7 @@ pub const Edit = struct {
     palette: Palette,
     locked: bool,
     popup: Popup,
+    status_buffer: [256]u8 = undefined,
 
     pub fn init(ui: Ui, sm: *StateMachine) Edit {
         const ix: i32 = @intFromFloat(ui.pivots[PIVOTS.TOP_LEFT].x + CONF.CANVAS_X);
@@ -90,6 +91,15 @@ pub const Edit = struct {
                 if (rl.isMouseButtonDown(rl.MouseButton.right)) color = 0;
                 self.canvas.data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)] = color;
             }
+        }
+
+        // Status bar with dynamic info
+        var status_buf: [64:0]u8 = undefined;
+        if (mouse_cell_x >= 0 and mouse_cell_x < CONF.SPRITE_SIZE and
+            mouse_cell_y >= 0 and mouse_cell_y < CONF.SPRITE_SIZE)
+        {
+            _ = std.fmt.bufPrintZ(&status_buf, "Pos: {d}, {d}", .{ mouse_cell_x, mouse_cell_y }) catch {};
+            rl.drawText(&status_buf, self.canvas.x, self.canvas.x + CONF.SPRITE_SIZE * CONF.GRID_SIZE + 68, 20, DB16.WHITE);
         }
     }
     pub fn clearCanvas(self: *Edit) void {
@@ -148,7 +158,6 @@ pub const Edit = struct {
                 );
             }
         }
-
         rl.drawRectangleLines(
             self.canvas.x,
             self.canvas.y,
@@ -157,19 +166,17 @@ pub const Edit = struct {
             DB16.STEEL_BLUE,
         );
 
+        // Previews
         const px = self.canvas.x + self.canvas.width + 24;
         const py = self.canvas.y;
-
         const dw: i32 = @divFloor(self.canvas.height, 4);
-
         self.draw_preview(px, py, 4, DB16.BLACK);
         self.draw_preview(px + dw + 8, py, 4, DB16.WHITE);
 
+        // Swatches
         const swa_x: i32 = px;
         const swa_y: i32 = py + 160;
-
         rl.drawText("ACTIVE SWATCHES", swa_x, swa_y, 20, rl.Color.ray_white);
-
         inline for (0..4) |i| {
             const x_shift: i32 = @intCast(i * 54);
             const index: u8 = @intCast(i);
@@ -179,6 +186,33 @@ pub const Edit = struct {
 
             if (self.ui.button(fx, fy, 48, 48, "", self.palette.getColorFromIndex(db16_idx), mouse)) {
                 self.palette.swatch = index;
+            }
+
+            if (self.palette.swatch == i) {
+                rl.drawRectangleRoundedLinesEx(
+                    rl.Rectangle.init(
+                        fx + 5,
+                        fy + 5,
+                        40,
+                        40,
+                    ),
+                    CONF.CORNER_RADIUS,
+                    CONF.CORNER_QUALITY,
+                    2,
+                    DB16.BLACK,
+                );
+                rl.drawRectangleRoundedLinesEx(
+                    rl.Rectangle.init(
+                        fx + 4,
+                        fy + 4,
+                        40,
+                        40,
+                    ),
+                    CONF.CORNER_RADIUS,
+                    CONF.CORNER_QUALITY,
+                    2,
+                    DB16.WHITE,
+                );
             }
         }
 
@@ -200,11 +234,12 @@ pub const Edit = struct {
         }
 
         // Footer
-        const foo_x: i32 = 0;
-        const foo_y: i32 = 0;
+        const foo_x: i32 = @intFromFloat(self.ui.pivots[PIVOTS.BOTTOM_LEFT].x);
+        const foo_y: i32 = @intFromFloat(self.ui.pivots[PIVOTS.BOTTOM_LEFT].y);
+
         rl.drawText(
-            CONF.VERSION,
-            foo_x - rl.measureText("[TAB] cycle palette, [1-4] select swatch", CONF.DEFAULT_FONT_SIZE),
+            "[TAB] cycle palette, [1-4] select swatch",
+            foo_x,
             foo_y - CONF.DEFAULT_FONT_SIZE,
             CONF.DEFAULT_FONT_SIZE,
             self.ui.secondary_color,
