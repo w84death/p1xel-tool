@@ -9,28 +9,43 @@ const State = @import("../state.zig").State;
 const StateMachine = @import("../state.zig").StateMachine;
 const Tiles = @import("../tiles.zig").Tiles;
 
+const Popup = enum {
+    none,
+    info_not_implemented,
+};
+
 pub const TilesetScene = struct {
     ui: Ui,
     sm: *StateMachine,
     palette: *Palette,
     tiles: *Tiles,
+    selected: u8,
+    locked: bool,
+    popup: Popup,
     pub fn init(ui: Ui, sm: *StateMachine, pal: *Palette, tiles: *Tiles) TilesetScene {
         return TilesetScene{
             .ui = ui,
             .sm = sm,
             .tiles = tiles,
+            .selected = 0,
             .palette = pal,
+            .locked = false,
+            .popup = Popup.none,
         };
     }
     pub fn draw(self: *TilesetScene, mouse: rl.Vector2) void {
-        const px = self.ui.pivots[PIVOTS.TOP_LEFT].x;
-        const py = self.ui.pivots[PIVOTS.TOP_LEFT].y;
-        if (self.ui.button(px, py, 80, 32, "< Menu", DB16.BLUE, mouse)) {
+        const nav: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y);
+        var nav_step = nav.x;
+        if (self.ui.button(nav_step, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse) and !self.locked) {
             self.sm.goTo(State.main_menu);
         }
 
-        const tiles_x: i32 = @intFromFloat(px);
-        const tiles_y: i32 = @intFromFloat(py + 64);
+        nav_step += 88;
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Export tileset", DB16.GREEN, mouse) and !self.locked) {}
+
+        const t_pos = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y + 64);
+        const tiles_x: i32 = @intFromFloat(t_pos.x);
+        const tiles_y: i32 = @intFromFloat(t_pos.y);
         const tiles_in_row: usize = 16;
         const scale: i32 = 4;
         inline for (0..CONF.MAX_TILES) |i| {
@@ -38,16 +53,70 @@ pub const TilesetScene = struct {
             const x: i32 = tiles_x + x_shift;
             const y: i32 = @divFloor(i, tiles_in_row) * (CONF.SPRITE_SIZE * scale + 8);
             const size: i32 = CONF.SPRITE_SIZE * scale + 2;
+            const fx: f32 = @floatFromInt(x);
+            const fy: f32 = @floatFromInt(tiles_y + y);
             if (i < self.tiles.count) {
-                _ = self.ui.button(@floatFromInt(x), @floatFromInt(tiles_y + y), size, size, "", DB16.BLACK, mouse);
+                if (self.ui.button(fx, fy, size, size, "", DB16.BLACK, mouse)) {
+                    self.selected = i;
+                }
                 self.tiles.draw_tile(i, x, tiles_y + y, scale);
+                if (self.selected == i) {
+                    rl.drawRectangleRoundedLinesEx(rl.Rectangle.init(fx + 5, fy + 5, size - 8, size - 8), CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, DB16.BLACK);
+                    rl.drawRectangleRoundedLinesEx(rl.Rectangle.init(fx + 4, fy + 4, size - 8, size - 8), CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, DB16.WHITE);
+                }
             } else {
                 if (i == self.tiles.count) {
-                    _ = self.ui.button(@floatFromInt(x), @floatFromInt(tiles_y + y), size, size, "+", DB16.DARK_GREEN, mouse);
+                    if (self.ui.button(@floatFromInt(x), @floatFromInt(tiles_y + y), size, size, "+", DB16.DARK_GREEN, mouse)) {
+                        self.locked = true;
+                        self.popup = Popup.info_not_implemented;
+                    }
                 } else {
                     const rec = rl.Rectangle.init(@floatFromInt(x), @floatFromInt(tiles_y + y), @floatFromInt(size), @floatFromInt(size));
-                    rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.DARK_GRAY);
+                    rl.drawRectangleRoundedLines(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.DARK_GRAY);
                 }
+            }
+        }
+
+        const tools: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.BOTTOM_LEFT].x, self.ui.pivots[PIVOTS.BOTTOM_LEFT].y - 20);
+        var tools_step = tools.x;
+        if (self.ui.button(tools_step, tools.y, 160, 32, "Edit", DB16.BLUE, mouse) and !self.locked) {
+            self.sm.goTo(State.editor);
+        }
+        tools_step += 168;
+        if (self.ui.button(tools_step, tools.y, 160, 32, "Duplicate", DB16.LIGHT_GRAY, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+        tools_step += 168;
+        if (self.ui.button(tools_step, tools.y, 160, 32, "<< Shift left", DB16.LIGHT_GRAY, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+        tools_step += 168;
+        if (self.ui.button(tools_step, tools.y, 160, 32, "Shift right >>", DB16.LIGHT_GRAY, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+        tools_step += 168;
+        if (self.ui.button(tools_step, tools.y, 160, 32, "Delete tile", DB16.RED, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+
+        // Popups
+        if (self.popup != Popup.none) {
+            rl.drawRectangle(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, rl.Color.init(0, 0, 0, 128));
+            switch (self.popup) {
+                Popup.info_not_implemented => {
+                    if (self.ui.infoPopup("Not implemented yet...", mouse, DB16.DARK_GRAY)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.locked = false;
+                            self.sm.hot = true;
+                        }
+                    }
+                },
+                else => {},
             }
         }
     }

@@ -32,10 +32,18 @@ pub const Tiles = struct {
         }
         var tiles: [CONF.MAX_TILES]Tile = undefined;
         tiles[0] = Tile.init(example_data, 0);
+
+        for (0..CONF.SPRITE_SIZE) |y| {
+            for (0..CONF.SPRITE_SIZE) |x| {
+                const fxy: f32 = @floatFromInt(x + y);
+                example_data[y][x] = @intFromFloat(@mod((std.math.sin(fxy)), 4));
+            }
+        }
+        tiles[1] = Tile.init(example_data, 0);
         return Tiles{
             .db = tiles,
             .palette = palette,
-            .count = 1,
+            .count = 2,
         };
     }
     pub fn draw_tile(self: *Tiles, index: usize, x: i32, y: i32, scale: i32) void {
