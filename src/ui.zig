@@ -65,7 +65,7 @@ pub const UI = struct {
         return rl.isMouseButtonPressed(rl.MouseButton.left) and hover;
     }
 
-    pub fn yesNoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2) ?bool {
+    fn drawBasePopup(self: UI, message: [:0]const u8, bg_color: rl.Color) rl.Vector4 {
         const text_width: f32 = @floatFromInt(rl.measureText(message, CONF.DEFAULT_FONT_SIZE));
         const popup_size = rl.Vector2.init(text_width + 128, 128);
         const center = rl.Vector2.init(self.pivots[PIVOTS.CENTER].x, self.pivots[PIVOTS.CENTER].y);
@@ -76,10 +76,40 @@ pub const UI = struct {
         const text_y = popup_corner.y + 24.0;
 
         rl.drawRectangleRounded(rec_shadow, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.BLACK);
-        rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.DARK_GRAY);
-        rl.drawRectangleRoundedLines(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.RED);
+        rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, bg_color);
+        rl.drawRectangleRoundedLines(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.WHITE);
         rl.drawText(message, @intFromFloat(text_x), @intFromFloat(text_y), CONF.DEFAULT_FONT_SIZE, DB16.WHITE);
+        return rl.Vector4.init(
+            popup_corner.x,
+            popup_corner.y,
+            popup_size.x,
+            popup_size.y,
+        );
+    }
 
+    pub fn infoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2, bg_color: rl.Color) ?bool {
+        // Popup
+        const popupv4 = self.drawBasePopup(message, bg_color);
+        const popup_corner = rl.Vector2.init(popupv4.x, popupv4.y);
+        const popup_height = popupv4.w;
+
+        // Button
+        const button_height = 32;
+        const button_width = 80;
+        const button_x = self.pivots[PIVOTS.CENTER].x - @divFloor(button_width, 2);
+        const button_y = popup_corner.y + popup_height - 50.0;
+        const ok_clicked = self.button(button_x, button_y, button_width, button_height, "OK", DB16.DARK_GRAY, mouse);
+        if (ok_clicked) return true;
+        return null;
+    }
+
+    pub fn yesNoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2) ?bool {
+        // Popup
+        const popupv4 = self.drawBasePopup(message, DB16.NAVY_BLUE);
+        const popup_corner = rl.Vector2.init(popupv4.x, popupv4.y);
+        const popup_size = rl.Vector2.init(popupv4.z, popupv4.w);
+
+        // buttons
         const button_y = popup_corner.y + popup_size.y - 50.0;
         const button_height = 32;
         const button_width = 80;

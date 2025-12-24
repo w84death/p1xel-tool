@@ -20,7 +20,12 @@ const Canvas = struct {
 };
 
 const Popup = enum {
+    none,
+    info_not_implemented,
     confirm_clear,
+    info_save_ppm_ok,
+    info_save_ppm_fail,
+    info_save_tileset,
 };
 
 pub const Edit = struct {
@@ -29,7 +34,7 @@ pub const Edit = struct {
     canvas: Canvas,
     palette: Palette,
     locked: bool,
-    popup: ?Popup,
+    popup: Popup,
 
     pub fn init(ui: Ui, sm: *StateMachine) Edit {
         const ix: i32 = @intFromFloat(ui.pivots[PIVOTS.TOP_LEFT].x + CONF.CANVAS_X);
@@ -49,7 +54,7 @@ pub const Edit = struct {
             },
             .palette = pal,
             .locked = false,
-            .popup = null,
+            .popup = Popup.none,
         };
     }
     pub fn handleKeyboard(self: *Edit) void {
@@ -93,28 +98,33 @@ pub const Edit = struct {
     pub fn draw(self: *Edit, mouse: rl.Vector2) !void {
 
         // Navigation (top)
-        //
-
         const nav: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y);
         var nav_step = nav.x;
-        if (self.ui.button(nav_step, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse)) {
+        if (self.ui.button(nav_step, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse) and !self.locked) {
             self.sm.goTo(State.main_menu);
         }
 
         nav_step += 88;
-        if (self.ui.button(nav_step, nav.y, 160, 32, "Clear canvas", DB16.RED, mouse)) {
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Clear canvas", DB16.RED, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.confirm_clear;
         }
         nav_step += 168;
-        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Image (PPM)", DB16.GREEN, mouse)) {
-            try self.export_to_ppm();
+        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Image (PPM)", DB16.GREEN, mouse) and !self.locked) {
+            self.locked = true;
+            self.export_to_ppm() catch {
+                self.popup = Popup.info_save_ppm_fail;
+                return;
+            };
+            self.popup = Popup.info_save_ppm_ok;
         }
         nav_step += 248;
-        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tileset (ASM)", DB16.GREEN, mouse)) {}
+        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tileset (ASM)", DB16.GREEN, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
 
         // Canvas
-        //
         for (0..CONF.SPRITE_SIZE) |y| {
             for (0..CONF.SPRITE_SIZE) |x| {
                 const idx = self.canvas.data[y][x];
@@ -173,7 +183,6 @@ pub const Edit = struct {
         }
 
         // Palette
-        //
         const pal_x: i32 = swa_x;
         const pal_y: i32 = swa_y + 100;
 
@@ -191,18 +200,47 @@ pub const Edit = struct {
         }
 
         // Popups
-        //
-
-        if (self.popup == Popup.confirm_clear) {
+        if (self.popup != Popup.none) {
             rl.drawRectangle(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, rl.Color.init(0, 0, 0, 128));
-            const result = self.ui.yesNoPopup("Clear canvas?", mouse);
-            if (result) |res| {
-                if (res) {
-                    self.clearCanvas();
-                }
-                self.popup = null;
-                self.locked = false;
-                self.sm.hot = true;
+            switch (self.popup) {
+                Popup.info_not_implemented => {
+                    if (self.ui.infoPopup("Not implemented yet...", mouse, DB16.DARK_GRAY)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.locked = false;
+                            self.sm.hot = true;
+                        }
+                    }
+                },
+                Popup.confirm_clear => {
+                    if (self.ui.yesNoPopup("Clear canvas?", mouse)) |confirmed| {
+                        if (confirmed) {
+                            self.clearCanvas();
+                        }
+                        self.popup = Popup.none;
+                        self.locked = false;
+                        self.sm.hot = true;
+                    }
+                },
+                Popup.info_save_ppm_ok => {
+                    if (self.ui.infoPopup("PPM file saved!", mouse, DB16.DARK_GREEN)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.locked = false;
+                            self.sm.hot = true;
+                        }
+                    }
+                },
+                Popup.info_save_ppm_fail => {
+                    if (self.ui.infoPopup("Failed", mouse, DB16.RED)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.locked = false;
+                            self.sm.hot = true;
+                        }
+                    }
+                },
+                else => {},
             }
         }
     }
