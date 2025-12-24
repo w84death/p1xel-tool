@@ -39,7 +39,7 @@ pub fn main() !void {
             State.editor => {
                 edit.handleKeyboard();
                 edit.handleMouse(mouse);
-                edit.draw(mouse);
+                try edit.draw(mouse);
             },
             State.about => {
                 about.draw(mouse);

@@ -7,6 +7,9 @@ const Ui = @import("../ui.zig").UI;
 const PIVOTS = @import("../ui.zig").PIVOTS;
 const State = @import("../state.zig").State;
 const StateMachine = @import("../state.zig").StateMachine;
+const Ppm = @import("../ppm.zig").Ppm;
+const RGB = @import("../ppm.zig").RGB;
+const Color = @import("../ppm.zig").Color;
 
 const Canvas = struct {
     width: i32,
@@ -87,20 +90,31 @@ pub const Edit = struct {
     pub fn clearCanvas(self: *Edit) void {
         self.canvas.data = [_][CONF.SPRITE_SIZE]u8{[_]u8{0} ** CONF.SPRITE_SIZE} ** CONF.SPRITE_SIZE;
     }
-    pub fn draw(self: *Edit, mouse: rl.Vector2) void {
+    pub fn draw(self: *Edit, mouse: rl.Vector2) !void {
+
+        // Navigation (top)
+        //
+
         const nav: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y);
-        if (self.ui.button(nav.x, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse)) {
+        var nav_step = nav.x;
+        if (self.ui.button(nav_step, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse)) {
             self.sm.goTo(State.main_menu);
         }
 
-        if (self.ui.button(nav.x + 88, nav.y, 160, 32, "Clear canvas", DB16.RED, mouse)) {
+        nav_step += 88;
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Clear canvas", DB16.RED, mouse)) {
             self.locked = true;
             self.popup = Popup.confirm_clear;
         }
-        if (self.ui.button(nav.x + 88 + 160 + 8, nav.y, 80, 32, "Save", DB16.GREEN, mouse)) {
-            self.palette.savePalettesToFile();
+        nav_step += 168;
+        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Image (PPM)", DB16.GREEN, mouse)) {
+            try self.export_to_ppm();
         }
+        nav_step += 248;
+        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tileset (ASM)", DB16.GREEN, mouse)) {}
 
+        // Canvas
+        //
         for (0..CONF.SPRITE_SIZE) |y| {
             for (0..CONF.SPRITE_SIZE) |x| {
                 const idx = self.canvas.data[y][x];
@@ -133,7 +147,7 @@ pub const Edit = struct {
             DB16.STEEL_BLUE,
         );
 
-        const px = self.canvas.width + 48;
+        const px = self.canvas.x + self.canvas.width + 24;
         const py = self.canvas.y;
 
         const dw: i32 = @divFloor(self.canvas.height, 4);
@@ -141,7 +155,46 @@ pub const Edit = struct {
         self.draw_preview(px, py, 4, DB16.BLACK);
         self.draw_preview(px + dw + 8, py, 4, DB16.WHITE);
 
+        const swa_x: i32 = px;
+        const swa_y: i32 = py + 160;
+
+        rl.drawText("ACTIVE SWATCHES", swa_x, swa_y, 20, rl.Color.ray_white);
+
+        inline for (0..4) |i| {
+            const x_shift: i32 = @intCast(i * 54);
+            const index: u8 = @intCast(i);
+            const db16_idx = self.palette.current[i];
+            const fx: f32 = @floatFromInt(swa_x + x_shift);
+            const fy: f32 = @floatFromInt(swa_y + 28);
+
+            if (self.ui.button(fx, fy, 48, 48, "", self.palette.getColorFromIndex(db16_idx), mouse)) {
+                self.palette.swatch = index;
+            }
+        }
+
+        // Palette
+        //
+        const pal_x: i32 = swa_x;
+        const pal_y: i32 = swa_y + 100;
+
+        rl.drawText("DB16 PALETTE", pal_x, pal_y, 20, rl.Color.ray_white);
+        const colors_in_row: usize = 4;
+        inline for (0..16) |i| {
+            const x_shift: i32 = @intCast(@mod(i, colors_in_row) * (32 + 6));
+            const fx: f32 = @floatFromInt(pal_x + x_shift);
+            const iy: i32 = @divFloor(i, colors_in_row) * (32 + 6);
+            const fy: f32 = @floatFromInt(pal_y + iy + 28);
+
+            if (self.ui.button(fx, fy, 32, 32, "", self.palette.getColorFromIndex(i), mouse)) {
+                // swap color in palette
+            }
+        }
+
+        // Popups
+        //
+
         if (self.popup == Popup.confirm_clear) {
+            rl.drawRectangle(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, rl.Color.init(0, 0, 0, 128));
             const result = self.ui.yesNoPopup("Clear canvas?", mouse);
             if (result) |res| {
                 if (res) {
@@ -182,7 +235,27 @@ pub const Edit = struct {
         rl.drawRectangleLines(x, y, w, h, DB16.STEEL_BLUE);
     }
 
-    fn draw_palette() void {}
+    fn export_to_ppm(self: *Edit) !void {
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
 
-    fn draw_swatches() void {}
+        var ppm = try Ppm.init(
+            allocator,
+            CONF.SPRITE_SIZE,
+            CONF.SPRITE_SIZE,
+        );
+        defer ppm.deinit();
+
+        for (0..ppm.height) |y| {
+            for (0..ppm.width) |x| {
+                const idx = self.canvas.data[y][x];
+                const db16_idx = self.palette.current[idx];
+                const color = self.palette.getColorFromIndex(db16_idx);
+                ppm.data[y * ppm.width + x] = Color{ .data = RGB{ .r = color.r, .g = color.g, .b = color.b } };
+            }
+        }
+
+        try ppm.save("tile.ppm");
+    }
 };
