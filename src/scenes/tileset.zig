@@ -49,9 +49,9 @@ pub const TilesetScene = struct {
         const tiles_in_row: usize = 16;
         const scale: i32 = 4;
         inline for (0..CONF.MAX_TILES) |i| {
-            const x_shift: i32 = @intCast(@mod(i, tiles_in_row) * (CONF.SPRITE_SIZE * scale + 8));
+            const x_shift: i32 = @intCast(@mod(i, tiles_in_row) * (CONF.SPRITE_SIZE * scale + 12));
             const x: i32 = tiles_x + x_shift;
-            const y: i32 = @divFloor(i, tiles_in_row) * (CONF.SPRITE_SIZE * scale + 8);
+            const y: i32 = @divFloor(i, tiles_in_row) * (CONF.SPRITE_SIZE * scale + 12);
             const size: i32 = CONF.SPRITE_SIZE * scale + 2;
             const fx: f32 = @floatFromInt(x);
             const fy: f32 = @floatFromInt(tiles_y + y);
@@ -59,10 +59,10 @@ pub const TilesetScene = struct {
                 if (self.ui.button(fx, fy, size, size, "", DB16.BLACK, mouse)) {
                     self.selected = i;
                 }
-                self.tiles.draw_tile(i, x, tiles_y + y, scale);
+                self.tiles.draw_tile(i, x + 1, tiles_y + y + 1, scale);
                 if (self.selected == i) {
-                    rl.drawRectangleRoundedLinesEx(rl.Rectangle.init(fx + 5, fy + 5, size - 8, size - 8), CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, DB16.BLACK);
-                    rl.drawRectangleRoundedLinesEx(rl.Rectangle.init(fx + 4, fy + 4, size - 8, size - 8), CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, DB16.WHITE);
+                    rl.drawRectangleLines(x + 5, y + tiles_y + 5, size - 8, size - 8, DB16.BLACK);
+                    rl.drawRectangleLines(x + 4, y + tiles_y + 4, size - 8, size - 8, DB16.WHITE);
                 }
             } else {
                 if (i == self.tiles.count) {
@@ -71,8 +71,7 @@ pub const TilesetScene = struct {
                         self.popup = Popup.info_not_implemented;
                     }
                 } else {
-                    const rec = rl.Rectangle.init(@floatFromInt(x), @floatFromInt(tiles_y + y), @floatFromInt(size), @floatFromInt(size));
-                    rl.drawRectangleRoundedLines(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.DARK_GRAY);
+                    rl.drawRectangleLines(x, tiles_y + y, size, size, DB16.DARK_GRAY);
                 }
             }
         }

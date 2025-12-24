@@ -3,11 +3,11 @@
 ## About
 Sprite editor for my MS-DOS game. Made in Zig and Raylib.
 
-### Prototype
-![prealpha](media/prototype.png)
-
 ### Pre-alpha0
-![prealpha](media/alpha0.png)
+
+![edit window](media/alpha1-edit.png)
+
+![tileset window](media/alpha1-tileset.png)
 
 ## Run
 ```

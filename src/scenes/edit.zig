@@ -103,7 +103,7 @@ pub const EditScreen = struct {
             mouse_cell_y >= 0 and mouse_cell_y < CONF.SPRITE_SIZE)
         {
             _ = std.fmt.bufPrintZ(&status_buf, "Pos: {d}, {d}", .{ mouse_cell_x, mouse_cell_y }) catch {};
-            rl.drawText(&status_buf, self.canvas.x, self.canvas.x + CONF.SPRITE_SIZE * CONF.GRID_SIZE + 68, 20, DB16.WHITE);
+            rl.drawText(&status_buf, self.canvas.x, self.canvas.y + CONF.SPRITE_SIZE * CONF.GRID_SIZE + 8, 20, DB16.WHITE);
         }
     }
 
@@ -170,6 +170,22 @@ pub const EditScreen = struct {
             self.canvas.height,
             DB16.STEEL_BLUE,
         );
+        const clear_pos: rl.Vector2 = rl.Vector2.init(
+            @floatFromInt(self.canvas.x + CONF.SPRITE_SIZE * CONF.GRID_SIZE - 160),
+            @floatFromInt(self.canvas.y + CONF.SPRITE_SIZE * CONF.GRID_SIZE + 8),
+        );
+        if (self.ui.button(
+            clear_pos.x,
+            clear_pos.y,
+            160,
+            32,
+            "Clear canvas",
+            DB16.RED,
+            mouse,
+        ) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.confirm_clear;
+        }
 
         // Previews
         const px = self.canvas.x + self.canvas.width + 24;
@@ -195,8 +211,8 @@ pub const EditScreen = struct {
             }
 
             if (self.palette.swatch == i) {
-                rl.drawRectangleRoundedLinesEx(rl.Rectangle.init(fx + 5, fy + 5, swa_size - 8, swa_size - 8), CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, DB16.BLACK);
-                rl.drawRectangleRoundedLinesEx(rl.Rectangle.init(fx + 4, fy + 4, swa_size - 8, swa_size - 8), CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, 2, DB16.WHITE);
+                rl.drawRectangleLines(swa_x + x_shift + 5, swa_y + 28 + 5, swa_size - 8, swa_size - 8, DB16.BLACK);
+                rl.drawRectangleLines(swa_x + x_shift + 4, swa_y + 28 + 4, swa_size - 8, swa_size - 8, DB16.WHITE);
             }
 
             if (i == 0 and self.palette.current[0] == 0) {

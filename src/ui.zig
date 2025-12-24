@@ -65,15 +65,14 @@ pub const UI = struct {
         const fw: f32 = @floatFromInt(width);
         const fh: f32 = @floatFromInt(height);
         const rec = rl.Rectangle.init(x, y, fw, fh);
-        const rec_shadow = rl.Rectangle.init(x + CONF.SHADOW, y + CONF.SHADOW, fw, fh);
         const hover = rl.checkCollisionPointRec(mouse, rec);
         const c = if (hover) DB16.YELLOW else DB16.WHITE;
         const text_x: i32 = ix + @divFloor(width - rl.measureText(label, CONF.DEFAULT_FONT_SIZE), 2);
         const text_y: i32 = iy + @divFloor(height - CONF.DEFAULT_FONT_SIZE, 2);
 
-        rl.drawRectangleRounded(rec_shadow, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, DB16.BLACK);
-        rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, color);
-        rl.drawRectangleRoundedLinesEx(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, CONF.FRAME, c);
+        rl.drawRectangle(ix + CONF.SHADOW, iy + CONF.SHADOW, width, height, DB16.BLACK);
+        rl.drawRectangle(ix, iy, width, height, color);
+        rl.drawRectangleLines(ix, iy, width, height, c);
         rl.drawText(label, text_x, text_y, CONF.DEFAULT_FONT_SIZE, c);
 
         return rl.isMouseButtonPressed(rl.MouseButton.left) and hover;
