@@ -49,8 +49,14 @@ pub fn main() !void {
             },
         }
 
+        // Default UI
+
+        // Quit
         if (ui.button(ui.pivots[PIVOTS.TOP_RIGHT].x - 80, ui.pivots[PIVOTS.TOP_RIGHT].y, 80, 32, "Quit", DB16.RED, mouse)) {
             shouldClose = true;
         }
+
+        // Version
+        ui.drawVersion();
     }
 }

@@ -19,7 +19,12 @@ pub const UI = struct {
     primary_color: rl.Color,
     secondary_color: rl.Color,
     pivots: [5]rl.Vector2,
-    pub fn init(title: [:0]const u8, bg_color: rl.Color, primary_color: rl.Color, secondary_color: rl.Color) UI {
+    pub fn init(
+        title: [:0]const u8,
+        bg_color: rl.Color,
+        primary_color: rl.Color,
+        secondary_color: rl.Color,
+    ) UI {
         return UI{
             .app_name = title,
             .bg_color = bg_color,
@@ -44,7 +49,16 @@ pub const UI = struct {
         rl.closeWindow();
     }
 
-    pub fn button(self: UI, x: f32, y: f32, width: i32, height: i32, label: [:0]const u8, color: rl.Color, mouse: rl.Vector2) bool {
+    pub fn button(
+        self: UI,
+        x: f32,
+        y: f32,
+        width: i32,
+        height: i32,
+        label: [:0]const u8,
+        color: rl.Color,
+        mouse: rl.Vector2,
+    ) bool {
         _ = self;
         const ix: i32 = @intFromFloat(x);
         const iy: i32 = @intFromFloat(y);
@@ -65,7 +79,11 @@ pub const UI = struct {
         return rl.isMouseButtonPressed(rl.MouseButton.left) and hover;
     }
 
-    fn drawBasePopup(self: UI, message: [:0]const u8, bg_color: rl.Color) rl.Vector4 {
+    fn drawBasePopup(
+        self: UI,
+        message: [:0]const u8,
+        bg_color: rl.Color,
+    ) rl.Vector4 {
         const text_width: f32 = @floatFromInt(rl.measureText(message, CONF.DEFAULT_FONT_SIZE));
         const popup_size = rl.Vector2.init(text_width + 128, 128);
         const center = rl.Vector2.init(self.pivots[PIVOTS.CENTER].x, self.pivots[PIVOTS.CENTER].y);
@@ -87,7 +105,12 @@ pub const UI = struct {
         );
     }
 
-    pub fn infoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2, bg_color: rl.Color) ?bool {
+    pub fn infoPopup(
+        self: UI,
+        message: [:0]const u8,
+        mouse: rl.Vector2,
+        bg_color: rl.Color,
+    ) ?bool {
         // Popup
         const popupv4 = self.drawBasePopup(message, bg_color);
         const popup_corner = rl.Vector2.init(popupv4.x, popupv4.y);
@@ -98,12 +121,24 @@ pub const UI = struct {
         const button_width = 80;
         const button_x = self.pivots[PIVOTS.CENTER].x - @divFloor(button_width, 2);
         const button_y = popup_corner.y + popup_height - 50.0;
-        const ok_clicked = self.button(button_x, button_y, button_width, button_height, "OK", DB16.DARK_GRAY, mouse);
+        const ok_clicked = self.button(
+            button_x,
+            button_y,
+            button_width,
+            button_height,
+            "OK",
+            DB16.DARK_GRAY,
+            mouse,
+        );
         if (ok_clicked) return true;
         return null;
     }
 
-    pub fn yesNoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2) ?bool {
+    pub fn yesNoPopup(
+        self: UI,
+        message: [:0]const u8,
+        mouse: rl.Vector2,
+    ) ?bool {
         // Popup
         const popupv4 = self.drawBasePopup(message, DB16.NAVY_BLUE);
         const popup_corner = rl.Vector2.init(popupv4.x, popupv4.y);
@@ -116,12 +151,40 @@ pub const UI = struct {
         const no_x = popup_corner.x + 24;
         const yes_x = popup_corner.x + popup_size.x - 80 - 24;
 
-        const yes_clicked = self.button(yes_x, button_y, button_width, button_height, "Yes", DB16.GREEN, mouse);
+        const yes_clicked = self.button(
+            yes_x,
+            button_y,
+            button_width,
+            button_height,
+            "Yes",
+            DB16.GREEN,
+            mouse,
+        );
         if (yes_clicked) return true;
 
-        const no_clicked = self.button(no_x, button_y, button_width, button_height, "No", DB16.RED, mouse);
+        const no_clicked = self.button(
+            no_x,
+            button_y,
+            button_width,
+            button_height,
+            "No",
+            DB16.RED,
+            mouse,
+        );
         if (no_clicked) return false;
 
         return null;
+    }
+    pub fn drawVersion(self: UI) void {
+        const ver_x: i32 = @intFromFloat(self.pivots[PIVOTS.BOTTOM_RIGHT].x);
+        const ver_y: i32 = @intFromFloat(self.pivots[PIVOTS.BOTTOM_RIGHT].y);
+
+        rl.drawText(
+            CONF.VERSION,
+            ver_x - rl.measureText(CONF.VERSION, CONF.DEFAULT_FONT_SIZE),
+            ver_y - CONF.DEFAULT_FONT_SIZE,
+            CONF.DEFAULT_FONT_SIZE,
+            self.secondary_color,
+        );
     }
 };

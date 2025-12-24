@@ -7,7 +7,7 @@ Sprite editor for my MS-DOS game. Made in Zig and Raylib.
 ![prealpha](media/prototype.png)
 
 ### Pre-alpha0
-![prealpha](media/pre-alpha0.png)
+![prealpha](media/alpha0.png)
 
 ## Run
 ```

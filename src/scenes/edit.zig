@@ -199,6 +199,17 @@ pub const Edit = struct {
             }
         }
 
+        // Footer
+        const foo_x: i32 = 0;
+        const foo_y: i32 = 0;
+        rl.drawText(
+            CONF.VERSION,
+            foo_x - rl.measureText("[TAB] cycle palette, [1-4] select swatch", CONF.DEFAULT_FONT_SIZE),
+            foo_y - CONF.DEFAULT_FONT_SIZE,
+            CONF.DEFAULT_FONT_SIZE,
+            self.ui.secondary_color,
+        );
+
         // Popups
         if (self.popup != Popup.none) {
             rl.drawRectangle(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, rl.Color.init(0, 0, 0, 128));

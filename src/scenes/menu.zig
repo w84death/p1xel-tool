@@ -44,10 +44,5 @@ pub const Menu = struct {
             }
             y += 38;
         }
-
-        const ver_x: i32 = @intFromFloat(self.ui.pivots[PIVOTS.BOTTOM_RIGHT].x);
-        const ver_y: i32 = @intFromFloat(self.ui.pivots[PIVOTS.BOTTOM_RIGHT].y);
-
-        rl.drawText(CONF.VERSION, ver_x - rl.measureText(CONF.THE_NAME, CONF.DEFAULT_FONT_SIZE), ver_y - CONF.DEFAULT_FONT_SIZE, CONF.DEFAULT_FONT_SIZE, self.ui.secondary_color);
     }
 };
