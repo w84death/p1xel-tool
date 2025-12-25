@@ -3,7 +3,9 @@
 ## About
 Sprite editor for my MS-DOS game. Made in Zig and Raylib.
 
-### Pre-alpha0
+### Pre-alpha1
+
+![menu window](media/alpha1-menu.png)
 
 ![edit window](media/alpha1-edit.png)
 
