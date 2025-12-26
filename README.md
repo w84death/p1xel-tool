@@ -3,13 +3,24 @@
 ## About
 Sprite editor for my MS-DOS game. Made in Zig and Raylib.
 
-### Pre-alpha1
+### Features
 
-![menu window](media/alpha1-menu.png)
+- Linux and Windows under 400KB binary
+- Pixelart 16x16 sprite/tile editor
+- Dawbringer's 16 color palette
+- custom 4 color palette per tile
+- 128 custom palettes
+- 128 tile per tileset
+- save/load custom palettes
+- save/load tileset
 
-![edit window](media/alpha1-edit.png)
+### Screenshots
 
-![tileset window](media/alpha1-tileset.png)
+![menu window](media/alpha2-menu.png)
+
+![edit window](media/alpha2-edit.png)
+
+![tileset window](media/alpha2-tileset.png)
 
 ## Run
 ```
