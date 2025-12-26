@@ -2,12 +2,13 @@ const rl = @import("raylib");
 const DB16 = @import("palette.zig").DB16;
 
 pub const CONF = struct {
-    pub const VERSION = "alpha1";
+    pub const VERSION = "alpha2";
     pub const THE_NAME = "P1Xel Editor";
     pub const SCREEN_W = 1280;
     pub const SCREEN_H = 800;
     pub const PALETTES_FILE = "palettes.dat";
-    pub const MAX_PALETTES = 100;
+    pub const TILES_FILE = "tiles.dat";
+    pub const MAX_PALETTES = 128;
     pub const MAX_TILES = 128;
     pub const DEFAULT_FONT_SIZE = 20;
     pub const CORNER_RADIUS = 0.1;

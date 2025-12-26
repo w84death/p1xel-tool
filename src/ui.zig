@@ -186,4 +186,9 @@ pub const UI = struct {
             self.secondary_color,
         );
     }
+    pub fn drawCursorLines(self: UI, mouse: rl.Vector2) void {
+        _ = self;
+        rl.drawLine(@intFromFloat(mouse.x), 0, @intFromFloat(mouse.x), @intFromFloat(CONF.SCREEN_H), DB16.LIGHT_GRAY);
+        rl.drawLine(0, @intFromFloat(mouse.y), @intFromFloat(CONF.SCREEN_W), @intFromFloat(mouse.y), DB16.LIGHT_GRAY);
+    }
 };

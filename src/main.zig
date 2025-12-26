@@ -19,10 +19,11 @@ pub fn main() !void {
     var pal = Palette.init();
     pal.loadPalettesFromFile();
     var tiles = Tiles.init(&pal);
+    tiles.loadTilesFromFile();
     const menu = MenuScreen.init(ui, &sm);
     var edit = EditScreen.init(ui, &sm, &pal, &tiles);
     const about = AboutScreen.init(ui, &sm);
-    var tileset = TilesetScreen.init(ui, &sm, &pal, &tiles);
+    var tileset = TilesetScreen.init(ui, &sm, &pal, &tiles, &edit);
 
     ui.createWindow();
     defer ui.closeWindow();
@@ -38,6 +39,7 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         rl.clearBackground(ui.bg_color);
+        ui.drawCursorLines(mouse);
 
         switch (sm.current) {
             State.main_menu => {

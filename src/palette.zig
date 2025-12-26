@@ -107,7 +107,7 @@ pub const Palette = struct {
     pub fn newPalette(self: *Palette) void {
         if (self.count < CONF.MAX_PALETTES) {
             self.db[self.count] = self.current;
-            self.index = self.count - 1;
+            self.index = self.count;
             self.count += 1;
             self.savePalettesToFile();
             self.updated = false;

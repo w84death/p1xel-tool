@@ -27,24 +27,69 @@ pub const Tiles = struct {
         var example_data: [CONF.SPRITE_SIZE][CONF.SPRITE_SIZE]u8 = undefined;
         for (0..CONF.SPRITE_SIZE) |y| {
             for (0..CONF.SPRITE_SIZE) |x| {
-                example_data[y][x] = if ((x + y) % 2 == 0) 1 else 2;
+                example_data[y][x] = 0;
             }
         }
         var tiles: [CONF.MAX_TILES]Tile = undefined;
         tiles[0] = Tile.init(example_data, 0);
-
-        for (0..CONF.SPRITE_SIZE) |y| {
-            for (0..CONF.SPRITE_SIZE) |x| {
-                const fxy: f32 = @floatFromInt(x + y);
-                example_data[y][x] = @intFromFloat(@mod((std.math.sin(fxy)), 4));
-            }
-        }
-        tiles[1] = Tile.init(example_data, 0);
         return Tiles{
             .db = tiles,
             .palette = palette,
-            .count = 2,
+            .count = 1,
         };
+    }
+    pub fn loadTilesFromFile(self: *Tiles) void {
+        var example_data: [CONF.SPRITE_SIZE][CONF.SPRITE_SIZE]u8 = undefined;
+        for (0..CONF.SPRITE_SIZE) |y| {
+            for (0..CONF.SPRITE_SIZE) |x| {
+                example_data[y][x] = 0;
+            }
+        }
+        const file = std.fs.cwd().openFile(CONF.TILES_FILE, .{}) catch {
+            self.db[0] = Tile.init(example_data, 0);
+            self.count = 1;
+            return;
+        };
+        defer file.close();
+
+        const data = file.readToEndAlloc(std.heap.page_allocator, 1024 * 1024) catch {
+            self.db[0] = Tile.init(example_data, 0);
+            self.count = 1;
+            return;
+        };
+        defer std.heap.page_allocator.free(data);
+
+        const per_tile = CONF.SPRITE_SIZE * CONF.SPRITE_SIZE + 1;
+        self.count = @min(data.len / per_tile, CONF.MAX_TILES);
+        for (0..self.count) |i| {
+            const offset = i * per_tile;
+            const pal = data[offset];
+            var tile_data: [CONF.SPRITE_SIZE][CONF.SPRITE_SIZE]u8 = undefined;
+            for (0..CONF.SPRITE_SIZE) |y| {
+                for (0..CONF.SPRITE_SIZE) |x| {
+                    tile_data[y][x] = data[offset + 1 + y * CONF.SPRITE_SIZE + x];
+                }
+            }
+            self.db[i] = Tile.init(tile_data, pal);
+        }
+    }
+    pub fn saveTilesToFile(self: *Tiles) void {
+        const per_tile: usize = CONF.SPRITE_SIZE * CONF.SPRITE_SIZE + 1;
+        const total_bytes = self.count * per_tile;
+        var buf: [CONF.MAX_TILES * per_tile]u8 = undefined;
+        for (0..self.count) |i| {
+            const offset = i * per_tile;
+            buf[offset] = self.db[i].pal;
+            for (0..CONF.SPRITE_SIZE) |y| {
+                for (0..CONF.SPRITE_SIZE) |x| {
+                    buf[offset + 1 + y * CONF.SPRITE_SIZE + x] = self.db[i].data[y][x];
+                }
+            }
+        }
+
+        const file = std.fs.cwd().createFile(CONF.TILES_FILE, .{}) catch return;
+        defer file.close();
+        _ = file.write(buf[0..total_bytes]) catch return;
     }
     pub fn draw_tile(self: *Tiles, index: usize, x: i32, y: i32, scale: i32) void {
         for (0..CONF.SPRITE_SIZE) |py| {

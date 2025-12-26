@@ -8,7 +8,7 @@ const PIVOTS = @import("../ui.zig").PIVOTS;
 const State = @import("../state.zig").State;
 const StateMachine = @import("../state.zig").StateMachine;
 const Tiles = @import("../tiles.zig").Tiles;
-
+const Edit = @import("edit.zig").EditScreen;
 const Popup = enum {
     none,
     info_not_implemented,
@@ -19,14 +19,16 @@ pub const TilesetScene = struct {
     sm: *StateMachine,
     palette: *Palette,
     tiles: *Tiles,
+    edit: *Edit,
     selected: u8,
     locked: bool,
     popup: Popup,
-    pub fn init(ui: Ui, sm: *StateMachine, pal: *Palette, tiles: *Tiles) TilesetScene {
+    pub fn init(ui: Ui, sm: *StateMachine, pal: *Palette, tiles: *Tiles, edit: *Edit) TilesetScene {
         return TilesetScene{
             .ui = ui,
             .sm = sm,
             .tiles = tiles,
+            .edit = edit,
             .selected = 0,
             .palette = pal,
             .locked = false,
@@ -39,8 +41,22 @@ pub const TilesetScene = struct {
         if (self.ui.button(nav_step, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse) and !self.locked) {
             self.sm.goTo(State.main_menu);
         }
-
         nav_step += 88;
+
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Edit", DB16.BLUE, mouse) and !self.locked) {
+            const selected = self.tiles.db[self.selected];
+            self.edit.canvas.data = selected.data;
+            self.palette.current = self.palette.db[selected.pal];
+            self.palette.index = selected.pal;
+            self.edit.tile_id = self.selected;
+            self.sm.goTo(State.editor);
+        }
+
+        nav_step += 168;
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Save tiles", DB16.DARK_GREEN, mouse) and !self.locked) {
+            self.tiles.saveTilesToFile();
+        }
+        nav_step += 168;
         if (self.ui.button(nav_step, nav.y, 160, 32, "Export tileset", DB16.DARK_GREEN, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.info_not_implemented;
@@ -80,10 +96,7 @@ pub const TilesetScene = struct {
 
         const tools: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.BOTTOM_LEFT].x, self.ui.pivots[PIVOTS.BOTTOM_LEFT].y - 20);
         var tools_step = tools.x;
-        if (self.ui.button(tools_step, tools.y, 160, 32, "Edit", DB16.BLUE, mouse) and !self.locked) {
-            self.sm.goTo(State.editor);
-        }
-        tools_step += 168;
+
         if (self.ui.button(tools_step, tools.y, 160, 32, "Duplicate", DB16.LIGHT_GRAY, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.info_not_implemented;

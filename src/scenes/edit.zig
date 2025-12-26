@@ -36,8 +36,10 @@ pub const EditScreen = struct {
     canvas: Canvas,
     palette: *Palette,
     tiles: *Tiles,
+    tile_id: u8,
     locked: bool,
     popup: Popup,
+    needs_saving: bool,
     status_buffer: [256]u8 = undefined,
 
     pub fn init(ui: Ui, sm: *StateMachine, pal: *Palette, tiles: *Tiles) EditScreen {
@@ -55,8 +57,10 @@ pub const EditScreen = struct {
             },
             .palette = pal,
             .tiles = tiles,
+            .tile_id = 0,
             .locked = false,
             .popup = Popup.none,
+            .needs_saving = false,
         };
     }
     pub fn handleKeyboard(self: *EditScreen) void {
@@ -94,10 +98,10 @@ pub const EditScreen = struct {
             {
                 if (rl.isMouseButtonDown(rl.MouseButton.right)) color = 0;
                 self.canvas.data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)] = color;
+                self.needs_saving = true;
             }
         }
 
-        // Status bar with dynamic info
         var status_buf: [64:0]u8 = undefined;
         if (mouse_cell_x >= 0 and mouse_cell_x < CONF.SPRITE_SIZE and
             mouse_cell_y >= 0 and mouse_cell_y < CONF.SPRITE_SIZE)
@@ -111,7 +115,6 @@ pub const EditScreen = struct {
         self.canvas.data = [_][CONF.SPRITE_SIZE]u8{[_]u8{0} ** CONF.SPRITE_SIZE} ** CONF.SPRITE_SIZE;
     }
     pub fn draw(self: *EditScreen, mouse: rl.Vector2) !void {
-
         // Navigation (top)
         const nav: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y);
         var nav_step = nav.x;
@@ -123,9 +126,11 @@ pub const EditScreen = struct {
             self.sm.goTo(State.tileset);
         }
         nav_step += 168;
-        if (self.ui.button(nav_step, nav.y, 160, 32, "Save tile", DB16.DARK_GREEN, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Save tile", if (self.needs_saving) DB16.GREEN else DB16.DARK_GREEN, mouse) and !self.locked) {
+            self.tiles.db[self.tile_id].data = self.canvas.data;
+            self.tiles.db[self.tile_id].pal = self.palette.index;
+            self.tiles.saveTilesToFile();
+            self.needs_saving = false;
         }
         nav_step += 168;
         if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tile (PPM)", DB16.DARK_GREEN, mouse) and !self.locked) {
@@ -135,11 +140,6 @@ pub const EditScreen = struct {
                 return;
             };
             self.popup = Popup.info_save_ppm_ok;
-        }
-        nav_step += 248;
-        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tileset (ASM)", DB16.DARK_GREEN, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
         }
 
         // Canvas
@@ -230,6 +230,7 @@ pub const EditScreen = struct {
         rl.drawText(&status_buf, @intFromFloat(fsx), @intFromFloat(fsy), CONF.DEFAULT_FONT_SIZE, DB16.WHITE);
         if (self.palette.count > 1 and self.ui.button(fsx, fsy + 24, 64, 24, ">", DB16.BLUE, mouse) and !self.locked) {
             self.palette.cyclePalette();
+            self.needs_saving = true;
         }
         fsx += 38;
         if (self.palette.count > 1 and self.ui.button(fsx + 64, fsy, 80, 32, "Delete", DB16.RED, mouse) and !self.locked) {
@@ -242,9 +243,11 @@ pub const EditScreen = struct {
         if (self.palette.updated) {
             if (self.ui.button(fsx, fsy, 120, 32, "Update", DB16.BLUE, mouse) and !self.locked) {
                 self.palette.updatePalette();
+                self.needs_saving = true;
             }
             if (self.ui.button(fsx, fsy + 40, 120, 32, "Save new", DB16.GREEN, mouse) and !self.locked) {
                 self.palette.newPalette();
+                self.needs_saving = true;
             }
         }
 
