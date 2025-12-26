@@ -85,7 +85,7 @@ pub const TilesetScene = struct {
                 }
             } else {
                 if (i == self.tiles.count) {
-                    if (self.ui.button(@floatFromInt(x), @floatFromInt(tiles_y + y), size, size, "+", DB16.DARK_GREEN, mouse)) {
+                    if (self.ui.button(@floatFromInt(x), @floatFromInt(tiles_y + y), size, size, "+", CONF.COLOR_MENU_NORMAL, mouse)) {
                         self.tiles.newTile();
                     }
                 } else {

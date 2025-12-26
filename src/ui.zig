@@ -40,16 +40,7 @@ pub const UI = struct {
         rl.closeWindow();
     }
 
-    pub fn button(
-        self: UI,
-        x: f32,
-        y: f32,
-        width: i32,
-        height: i32,
-        label: [:0]const u8,
-        color: rl.Color,
-        mouse: rl.Vector2,
-    ) bool {
+    pub fn button(self: UI, x: f32, y: f32, width: i32, height: i32, label: [:0]const u8, color: rl.Color, mouse: rl.Vector2) bool {
         _ = self;
         const ix: i32 = @intFromFloat(x);
         const iy: i32 = @intFromFloat(y);
@@ -69,38 +60,28 @@ pub const UI = struct {
         return rl.isMouseButtonPressed(rl.MouseButton.left) and hover;
     }
 
-    fn drawBasePopup(
-        self: UI,
-        message: [:0]const u8,
-        bg_color: rl.Color,
-    ) rl.Vector4 {
+    fn drawBasePopup(self: UI, message: [:0]const u8, bg_color: rl.Color) rl.Vector4 {
         const text_width: f32 = @floatFromInt(rl.measureText(message, CONF.FONT_DEFAULT_SIZE));
         const popup_size = rl.Vector2.init(text_width + 128, 128);
         const center = rl.Vector2.init(self.pivots[PIVOTS.CENTER].x, self.pivots[PIVOTS.CENTER].y);
         const popup_corner = rl.Vector2.init(center.x - @divFloor(popup_size.x, 2), center.y - @divFloor(popup_size.y, 2));
-        const rec = rl.Rectangle.init(popup_corner.x, popup_corner.y, popup_size.x, popup_size.y);
-        const rec_shadow = rl.Rectangle.init(popup_corner.x + 8, popup_corner.y + 8, popup_size.x, popup_size.y);
+
         const text_x = popup_corner.x + @divFloor(popup_size.x - text_width, 2);
         const text_y = popup_corner.y + 24.0;
 
-        rl.drawRectangleRounded(rec_shadow, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, CONF.COLOR_SHADOW);
-        rl.drawRectangleRounded(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, bg_color);
-        rl.drawRectangleRoundedLines(rec, CONF.CORNER_RADIUS, CONF.CORNER_QUALITY, CONF.COLOR_LIGHT);
+        const x: i32 = @intFromFloat(popup_corner.x);
+        const y: i32 = @intFromFloat(popup_corner.y);
+        const w: i32 = @intFromFloat(popup_size.x);
+        const h: i32 = @intFromFloat(popup_size.y);
+
+        rl.drawRectangle(x + 8, y + 8, w, h, CONF.COLOR_SHADOW);
+        rl.drawRectangle(x, y, w, h, bg_color);
+        rl.drawRectangleLines(x, y, w, h, CONF.COLOR_LIGHT);
         rl.drawText(message, @intFromFloat(text_x), @intFromFloat(text_y), CONF.FONT_DEFAULT_SIZE, CONF.COLOR_POPUP_MSG);
-        return rl.Vector4.init(
-            popup_corner.x,
-            popup_corner.y,
-            popup_size.x,
-            popup_size.y,
-        );
+        return rl.Vector4.init(popup_corner.x, popup_corner.y, popup_size.x, popup_size.y);
     }
 
-    pub fn infoPopup(
-        self: UI,
-        message: [:0]const u8,
-        mouse: rl.Vector2,
-        bg_color: rl.Color,
-    ) ?bool {
+    pub fn infoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2, bg_color: rl.Color) ?bool {
         // Popup
         const popupv4 = self.drawBasePopup(message, bg_color);
         const popup_corner = rl.Vector2.init(popupv4.x, popupv4.y);
@@ -111,24 +92,12 @@ pub const UI = struct {
         const button_width = 80;
         const button_x = self.pivots[PIVOTS.CENTER].x - @divFloor(button_width, 2);
         const button_y = popup_corner.y + popup_height - 50.0;
-        const ok_clicked = self.button(
-            button_x,
-            button_y,
-            button_width,
-            button_height,
-            "OK",
-            CONF.COLOR_OK,
-            mouse,
-        );
+        const ok_clicked = self.button(button_x, button_y, button_width, button_height, "OK", CONF.COLOR_OK, mouse);
         if (ok_clicked) return true;
         return null;
     }
 
-    pub fn yesNoPopup(
-        self: UI,
-        message: [:0]const u8,
-        mouse: rl.Vector2,
-    ) ?bool {
+    pub fn yesNoPopup(self: UI, message: [:0]const u8, mouse: rl.Vector2) ?bool {
         // Popup
         const popupv4 = self.drawBasePopup(message, CONF.COLOR_POPUP);
         const popup_corner = rl.Vector2.init(popupv4.x, popupv4.y);
@@ -141,26 +110,10 @@ pub const UI = struct {
         const no_x = popup_corner.x + 24;
         const yes_x = popup_corner.x + popup_size.x - 80 - 24;
 
-        const yes_clicked = self.button(
-            yes_x,
-            button_y,
-            button_width,
-            button_height,
-            "Yes",
-            CONF.COLOR_YES,
-            mouse,
-        );
+        const yes_clicked = self.button(yes_x, button_y, button_width, button_height, "Yes", CONF.COLOR_YES, mouse);
         if (yes_clicked) return true;
 
-        const no_clicked = self.button(
-            no_x,
-            button_y,
-            button_width,
-            button_height,
-            "No",
-            CONF.COLOR_NO,
-            mouse,
-        );
+        const no_clicked = self.button(no_x, button_y, button_width, button_height, "No", CONF.COLOR_NO, mouse);
         if (no_clicked) return false;
 
         return null;

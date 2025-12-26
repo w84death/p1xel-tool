@@ -100,15 +100,15 @@ pub const Tiles = struct {
                 const xx: i32 = @intCast(px);
                 const yy: i32 = @intCast(py);
 
-                if (!(idx == 0 and self.palette.current[0] == 0)) {
-                    rl.drawRectangle(
-                        x + xx * scale,
-                        y + yy * scale,
-                        scale,
-                        scale,
-                        self.palette.getColorFromIndex(db16_idx),
-                    );
-                }
+                // if (!(idx == 0 and self.palette.current[0] == 0)) {
+                rl.drawRectangle(
+                    x + xx * scale,
+                    y + yy * scale,
+                    scale,
+                    scale,
+                    self.palette.getColorFromIndex(db16_idx),
+                );
+                // }
             }
         }
     }

@@ -25,7 +25,7 @@ pub fn main() !void {
     var edit = EditScreen.init(ui, &sm, &pal, &tiles);
     const about = AboutScreen.init(ui, &sm);
     var tileset = TilesetScreen.init(ui, &sm, &pal, &tiles, &edit);
-    var vfx = Vfx.init();
+    var vfx = try Vfx.init();
     ui.createWindow();
     defer ui.closeWindow();
 
@@ -35,12 +35,15 @@ pub fn main() !void {
     var shouldClose = false;
     while (!rl.windowShouldClose() and !shouldClose) {
         const mouse = rl.getMousePosition();
+        const fps: f32 = @floatFromInt(rl.getFPS());
+        const dt: f32 = 1000 / fps;
+
         sm.update();
         rl.beginDrawing();
         defer rl.endDrawing();
 
         rl.clearBackground(CONF.COLOR_BG);
-        vfx.draw();
+        vfx.draw(dt);
         ui.drawCursorLines(mouse);
 
         switch (sm.current) {
@@ -63,15 +66,7 @@ pub fn main() !void {
         // Default UI
 
         // Quit
-        if (ui.button(
-            ui.pivots[PIVOTS.TOP_RIGHT].x - 80,
-            ui.pivots[PIVOTS.TOP_RIGHT].y,
-            80,
-            32,
-            "Quit",
-            CONF.COLOR_MENU_SECONDARY,
-            mouse,
-        )) {
+        if (ui.button(ui.pivots[PIVOTS.TOP_RIGHT].x - 80, ui.pivots[PIVOTS.TOP_RIGHT].y, 80, 32, "Quit", CONF.COLOR_MENU_SECONDARY, mouse)) {
             shouldClose = true;
         }
         // Version

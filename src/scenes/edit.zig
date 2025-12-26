@@ -118,22 +118,22 @@ pub const EditScreen = struct {
         // Navigation (top)
         const nav: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y);
         var nav_step = nav.x;
-        if (self.ui.button(nav_step, nav.y, 80, 32, "< Menu", DB16.BLUE, mouse) and !self.locked) {
+        if (self.ui.button(nav_step, nav.y, 120, 32, "< Menu", CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
             self.sm.goTo(State.main_menu);
         }
-        nav_step += 88;
-        if (self.ui.button(nav_step, nav.y, 160, 32, "Select tile", DB16.BLUE, mouse) and !self.locked) {
+        nav_step += 128;
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Change tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.sm.goTo(State.tileset);
         }
         nav_step += 168;
-        if (self.ui.button(nav_step, nav.y, 160, 32, "Save tile", if (self.needs_saving) DB16.GREEN else DB16.DARK_GREEN, mouse) and !self.locked) {
+        if (self.ui.button(nav_step, nav.y, 160, 32, "Save tile", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.tiles.db[self.tile_id].data = self.canvas.data;
             self.tiles.db[self.tile_id].pal = self.palette.index;
             self.tiles.saveTilesToFile();
             self.needs_saving = false;
         }
         nav_step += 168;
-        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tile (PPM)", DB16.DARK_GREEN, mouse) and !self.locked) {
+        if (self.ui.button(nav_step, nav.y, 240, 32, "Export Tile (PPM)", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.export_to_ppm() catch {
                 self.popup = Popup.info_save_ppm_fail;
@@ -177,15 +177,7 @@ pub const EditScreen = struct {
             @floatFromInt(self.canvas.x + CONF.SPRITE_SIZE * CONF.GRID_SIZE - 160),
             @floatFromInt(self.canvas.y + CONF.SPRITE_SIZE * CONF.GRID_SIZE + 8),
         );
-        if (self.ui.button(
-            clear_pos.x,
-            clear_pos.y,
-            160,
-            32,
-            "Clear canvas",
-            DB16.RED,
-            mouse,
-        ) and !self.locked) {
+        if (self.ui.button(clear_pos.x, clear_pos.y, 160, 32, "Clear canvas", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.confirm_clear;
         }
@@ -201,7 +193,7 @@ pub const EditScreen = struct {
         const swa_x: i32 = px;
         const swa_y: i32 = py + 160;
         const swa_size: i32 = 48;
-        rl.drawText("ACTIVE SWATCHES", swa_x, swa_y, 20, rl.Color.ray_white);
+        rl.drawText("ACTIVE SWATCHES", swa_x, swa_y, 20, CONF.COLOR_PRIMARY);
         inline for (0..4) |i| {
             const x_shift: i32 = @intCast(i * (swa_size + 6));
             const index: u8 = @intCast(i);
@@ -219,7 +211,7 @@ pub const EditScreen = struct {
             }
 
             if (i == 0 and self.palette.current[0] == 0) {
-                rl.drawText("TRANSPARENT", swa_x, swa_y + swa_size + 32, 10, DB16.WHITE);
+                rl.drawText("TRANSPARENT", swa_x, swa_y + swa_size + 32, 10, CONF.COLOR_SECONDARY);
             }
         }
 
@@ -227,25 +219,25 @@ pub const EditScreen = struct {
         var fsy: f32 = @floatFromInt(swa_y + 28);
         var status_buf: [7:0]u8 = undefined;
         _ = std.fmt.bufPrintZ(&status_buf, "{d:0>2}/{d:0>2}", .{ self.palette.index + 1, self.palette.count }) catch {};
-        rl.drawText(&status_buf, @intFromFloat(fsx), @intFromFloat(fsy), CONF.FONT_DEFAULT_SIZE, DB16.WHITE);
-        if (self.palette.count > 1 and self.ui.button(fsx, fsy + 24, 64, 24, ">", DB16.BLUE, mouse) and !self.locked) {
+        rl.drawText(&status_buf, @intFromFloat(fsx), @intFromFloat(fsy), CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        if (self.palette.count > 1 and self.ui.button(fsx, fsy + 24, 64, 24, ">", CONF.COLOR_OK, mouse) and !self.locked) {
             self.palette.cyclePalette();
             self.needs_saving = true;
         }
         fsx += 38;
-        if (self.palette.count > 1 and self.ui.button(fsx + 64, fsy, 80, 32, "Delete", DB16.RED, mouse) and !self.locked) {
+        if (self.palette.count > 1 and self.ui.button(fsx + 64, fsy, 80, 32, "Delete", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
             self.palette.deletePalette();
         }
 
         fsx += 64;
-        rl.drawText("OPTIONS:", @intFromFloat(fsx), swa_y, 20, rl.Color.ray_white);
+        rl.drawText("OPTIONS:", @intFromFloat(fsx), swa_y, 20, CONF.COLOR_PRIMARY);
         fsy += 40;
         if (self.palette.updated) {
-            if (self.ui.button(fsx, fsy, 120, 32, "Update", DB16.BLUE, mouse) and !self.locked) {
+            if (self.ui.button(fsx, fsy, 120, 32, "Update", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.palette.updatePalette();
                 self.needs_saving = true;
             }
-            if (self.ui.button(fsx, fsy + 40, 120, 32, "Save new", DB16.GREEN, mouse) and !self.locked) {
+            if (self.ui.button(fsx, fsy + 40, 120, 32, "Save new", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.palette.newPalette();
                 self.needs_saving = true;
             }
@@ -255,7 +247,7 @@ pub const EditScreen = struct {
         const pal_x: i32 = swa_x;
         const pal_y: i32 = swa_y + 100;
         const pal_size: i32 = 32;
-        rl.drawText("DB16 PALETTE", pal_x, pal_y, 20, rl.Color.ray_white);
+        rl.drawText("DB16 PALETTE", pal_x, pal_y, 20, CONF.COLOR_PRIMARY);
         const colors_in_row: usize = 4;
         inline for (0..16) |i| {
             const x_shift: i32 = @intCast(@mod(i, colors_in_row) * (pal_size + 6));
@@ -272,20 +264,14 @@ pub const EditScreen = struct {
         const foo_x: i32 = @intFromFloat(self.ui.pivots[PIVOTS.BOTTOM_LEFT].x);
         const foo_y: i32 = @intFromFloat(self.ui.pivots[PIVOTS.BOTTOM_LEFT].y);
 
-        rl.drawText(
-            "[TAB] cycle palette, [1-4] select swatch",
-            foo_x,
-            foo_y - CONF.FONT_DEFAULT_SIZE,
-            CONF.FONT_DEFAULT_SIZE,
-            CONF.COLOR_SECONDARY,
-        );
+        rl.drawText("[TAB] cycle palette, [1-4] select swatch", foo_x, foo_y - CONF.FONT_DEFAULT_SIZE, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_SECONDARY);
 
         // Popups
         if (self.popup != Popup.none) {
-            rl.drawRectangle(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, rl.Color.init(0, 0, 0, 128));
+            rl.drawRectangle(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, rl.Color.init(0, 0, 0, CONF.POPUP_DIM));
             switch (self.popup) {
                 Popup.info_not_implemented => {
-                    if (self.ui.infoPopup("Not implemented yet...", mouse, DB16.DARK_GRAY)) |dismissed| {
+                    if (self.ui.infoPopup("Not implemented yet...", mouse, CONF.COLOR_SECONDARY)) |dismissed| {
                         if (dismissed) {
                             self.popup = Popup.none;
                             self.locked = false;
