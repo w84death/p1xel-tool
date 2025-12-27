@@ -157,13 +157,17 @@ pub const EditScene = struct {
             self.sm.goTo(State.main_menu);
         }
         nav_step += 128 + 32;
-        if (self.ui.button(nav_step, nav.y, 160, 32, "Change tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.ui.button(nav_step, nav.y, 180, 32, "Change tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.sm.goTo(State.tileset);
         }
-        nav_step += 168 + 32;
+        nav_step += 188;
+        if (self.ui.button(nav_step, nav.y, 180, 32, "Preview tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.sm.goTo(State.preview);
+        }
+        nav_step += 188 + 32;
         if (self.ui.button(nav_step, nav.y, 160, 32, "Save tile", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.tiles.db[self.tile_id].data = self.canvas.data;
-            self.tiles.db[self.tile_id].pal = self.palette.index;
+            self.tiles.db[self.tiles.selected].data = self.canvas.data;
+            self.tiles.db[self.tiles.selected].pal = self.palette.index;
             self.locked = true;
             self.tiles.saveTilesToFile() catch {
                 self.popup = Popup.info_save_fail;

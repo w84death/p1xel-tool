@@ -47,12 +47,11 @@ pub const TilesetScene = struct {
         nav_step += 128 + 32;
 
         if (self.ui.button(nav_step, nav.y, 180, 32, "Edit tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            const selected = self.tiles.db[self.selected];
-            self.edit.canvas.data = selected.data;
-            self.palette.current = self.palette.db[selected.pal];
-            self.palette.index = selected.pal;
-            self.edit.tile_id = self.selected;
             self.sm.goTo(State.editor);
+        }
+        nav_step += 188;
+        if (self.ui.button(nav_step, nav.y, 180, 32, "Preview", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.sm.goTo(State.preview);
         }
 
         nav_step += 188 + 32;
@@ -84,17 +83,22 @@ pub const TilesetScene = struct {
             const fy: f32 = @floatFromInt(tiles_y + y);
             if (i < self.tiles.count) {
                 if (self.ui.button(fx, fy, size, size, "", DB16.BLACK, mouse)) {
-                    self.selected = i;
+                    self.tiles.selected = i;
+
+                    const selected = self.tiles.db[self.tiles.selected];
+                    self.edit.canvas.data = selected.data;
+                    self.palette.current = self.palette.db[selected.pal];
+                    self.palette.index = selected.pal;
                 }
                 self.tiles.draw(i, x + 1, tiles_y + y + 1, scale);
-                if (self.selected == i) {
+                if (self.tiles.selected == i) {
                     rl.drawRectangleLines(x + 5, y + tiles_y + 5, size - 8, size - 8, DB16.BLACK);
                     rl.drawRectangleLines(x + 4, y + tiles_y + 4, size - 8, size - 8, DB16.WHITE);
                 }
             } else {
                 if (i == self.tiles.count) {
                     if (self.ui.button(@floatFromInt(x), @floatFromInt(tiles_y + y), size, size, "+", CONF.COLOR_MENU_NORMAL, mouse)) {
-                        self.tiles.newTile();
+                        try self.tiles.newTile();
                     }
                 } else {
                     rl.drawRectangleLines(x, tiles_y + y, size, size, DB16.LIGHT_GRAY);
@@ -106,20 +110,20 @@ pub const TilesetScene = struct {
         var tools_step = tools.x;
 
         if (self.ui.button(tools_step, tools.y, 160, 32, "Duplicate", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.tiles.duplicateTile(self.selected);
+            self.tiles.duplicateTile(self.tiles.selected);
         }
         tools_step += 168;
-        if (self.selected > 0) {
+        if (self.tiles.selected > 0) {
             if (self.ui.button(tools_step, tools.y, 160, 32, "<< Shift left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-                self.tiles.shiftLeft(self.selected);
-                self.selected -= 1;
+                self.tiles.shiftLeft(self.tiles.selected);
+                self.tiles.selected -= 1;
             }
             tools_step += 168;
         }
-        if (self.selected < self.tiles.count - 1) {
+        if (self.tiles.selected < self.tiles.count - 1) {
             if (self.ui.button(tools_step, tools.y, 160, 32, "Shift right >>", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-                self.tiles.shiftRight(self.selected);
-                self.selected += 1;
+                self.tiles.shiftRight(self.tiles.selected);
+                self.tiles.selected += 1;
             }
             tools_step += 168;
         }
@@ -162,9 +166,9 @@ pub const TilesetScene = struct {
                 Popup.confirm_delete => {
                     if (self.ui.yesNoPopup("Delete selected tile?", mouse)) |confirmed| {
                         if (confirmed) {
-                            self.tiles.delete(self.selected);
+                            self.tiles.delete(self.tiles.selected);
 
-                            self.selected = self.selected - 1;
+                            self.tiles.selected = self.tiles.selected - 1;
                         }
                         self.popup = Popup.none;
                         self.locked = false;

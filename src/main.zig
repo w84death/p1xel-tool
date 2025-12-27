@@ -59,6 +59,7 @@ pub fn main() !void {
                 try edit.draw(mouse);
             },
             State.preview => {
+                preview.handleMouse(mouse);
                 preview.draw(mouse);
             },
             State.about => {

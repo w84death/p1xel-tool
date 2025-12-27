@@ -21,20 +21,14 @@ pub const Tile = struct {
 
 pub const Tiles = struct {
     db: [CONF.MAX_TILES]Tile = undefined,
+    selected: u8 = 0,
     count: u8 = 0,
     palette: *Palette,
     updated: bool = false,
     pub fn init(palette: *Palette) Tiles {
-        var example_data: [CONF.SPRITE_SIZE][CONF.SPRITE_SIZE]u8 = undefined;
-        for (0..CONF.SPRITE_SIZE) |y| {
-            for (0..CONF.SPRITE_SIZE) |x| {
-                example_data[y][x] = 0;
-            }
-        }
-        var tiles: [CONF.MAX_TILES]Tile = undefined;
-        tiles[0] = Tile.init(example_data, 0);
         return Tiles{
-            .db = tiles,
+            .db = undefined,
+            .selected = 0,
             .palette = palette,
             .count = 1,
             .updated = false,
@@ -96,6 +90,7 @@ pub const Tiles = struct {
         _ = try file.write(buf[0..total_bytes]);
         self.updated = false;
     }
+
     pub fn draw(self: *Tiles, index: usize, x: i32, y: i32, scale: i32) void {
         for (0..CONF.SPRITE_SIZE) |py| {
             for (0..CONF.SPRITE_SIZE) |px| {
@@ -114,7 +109,7 @@ pub const Tiles = struct {
             }
         }
     }
-    pub fn newTile(self: *Tiles) void {
+    pub fn newTile(self: *Tiles) !void {
         var data: [CONF.SPRITE_SIZE][CONF.SPRITE_SIZE]u8 = undefined;
         for (0..CONF.SPRITE_SIZE) |y| {
             for (0..CONF.SPRITE_SIZE) |x| {

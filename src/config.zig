@@ -43,4 +43,9 @@ pub const CONF = struct {
     pub const VFX_SNOW_ALPHA = 0.0025;
     pub const VFX_SNOW_SPEED_MIN = 0.2;
     pub const VFX_SNOW_SPEED_MAX = 1.5;
+    pub const PREVIEW_W = 24;
+    pub const PREVIEW_H = 16;
+    pub const PREVIEW_LAYERS = 3;
+    pub const PREVIEW_SCALE = 2;
+    pub const PREVIEW_SIZE = SPRITE_SIZE * 2;
 };
