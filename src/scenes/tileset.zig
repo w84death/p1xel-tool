@@ -8,7 +8,7 @@ const PIVOTS = @import("../ui.zig").PIVOTS;
 const State = @import("../state.zig").State;
 const StateMachine = @import("../state.zig").StateMachine;
 const Tiles = @import("../tiles.zig").Tiles;
-const Edit = @import("edit.zig").EditScreen;
+const Edit = @import("edit.zig").EditScene;
 const Popup = enum {
     none,
     info_not_implemented,

@@ -9,10 +9,11 @@ const StateMachine = @import("state.zig").StateMachine;
 const State = @import("state.zig").State;
 const Tiles = @import("tiles.zig").Tiles;
 const Vfx = @import("vfx.zig").Vfx;
-const MenuScreen = @import("scenes/menu.zig").MenuScreen;
-const EditScreen = @import("scenes/edit.zig").EditScreen;
-const AboutScreen = @import("scenes/about.zig").AboutScreen;
-const TilesetScreen = @import("scenes/tileset.zig").TilesetScene;
+const MenuScene = @import("scenes/menu.zig").MenuScene;
+const EditScene = @import("scenes/edit.zig").EditScene;
+const AboutScene = @import("scenes/about.zig").AboutScene;
+const TilesetScene = @import("scenes/tileset.zig").TilesetScene;
+const PreviewScene = @import("scenes/preview.zig").PreviewScene;
 
 pub fn main() !void {
     const ui = Ui.init(CONF.THE_NAME);
@@ -21,11 +22,13 @@ pub fn main() !void {
     pal.loadPalettesFromFile();
     var tiles = Tiles.init(&pal);
     tiles.loadTilesFromFile();
-    var menu = MenuScreen.init(ui, &sm);
-    var edit = EditScreen.init(ui, &sm, &pal, &tiles);
-    const about = AboutScreen.init(ui, &sm);
-    var tileset = TilesetScreen.init(ui, &sm, &pal, &tiles, &edit);
+    var menu = MenuScene.init(ui, &sm);
+    var edit = EditScene.init(ui, &sm, &pal, &tiles);
+    const about = AboutScene.init(ui, &sm);
+    var tileset = TilesetScene.init(ui, &sm, &pal, &tiles, &edit);
     var vfx = try Vfx.init();
+    var preview = PreviewScene.init(ui, &sm, &pal, &tiles);
+
     ui.createWindow();
     defer ui.closeWindow();
 
@@ -54,6 +57,9 @@ pub fn main() !void {
                 edit.handleKeyboard();
                 edit.handleMouse(mouse);
                 try edit.draw(mouse);
+            },
+            State.preview => {
+                preview.draw(mouse);
             },
             State.about => {
                 about.draw(mouse);

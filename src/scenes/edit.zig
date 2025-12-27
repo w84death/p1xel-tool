@@ -35,7 +35,7 @@ const Tools = enum {
     fill,
 };
 
-pub const EditScreen = struct {
+pub const EditScene = struct {
     ui: Ui,
     sm: *StateMachine,
     canvas: Canvas,
@@ -48,13 +48,13 @@ pub const EditScreen = struct {
     tool: Tools = Tools.pixel,
     status_buffer: [256]u8 = undefined,
 
-    pub fn init(ui: Ui, sm: *StateMachine, pal: *Palette, tiles: *Tiles) EditScreen {
+    pub fn init(ui: Ui, sm: *StateMachine, pal: *Palette, tiles: *Tiles) EditScene {
         const ix: i32 = @intFromFloat(ui.pivots[PIVOTS.TOP_LEFT].x + CONF.CANVAS_X + 128);
         const iy: i32 = @intFromFloat(ui.pivots[PIVOTS.TOP_LEFT].y + CONF.CANVAS_Y);
         const p: *Palette = pal;
         p.index = tiles.db[0].pal;
         p.current = p.db[p.index];
-        return EditScreen{
+        return EditScene{
             .ui = ui,
             .sm = sm,
             .canvas = Canvas{
@@ -73,7 +73,7 @@ pub const EditScreen = struct {
             .tool = Tools.pixel,
         };
     }
-    pub fn handleKeyboard(self: *EditScreen) void {
+    pub fn handleKeyboard(self: *EditScene) void {
         if (self.locked) return;
         const key = rl.getKeyPressed();
         switch (key) {
@@ -89,7 +89,7 @@ pub const EditScreen = struct {
             else => {},
         }
     }
-    pub fn handleMouse(self: *EditScreen, mouse: rl.Vector2) void {
+    pub fn handleMouse(self: *EditScene, mouse: rl.Vector2) void {
         if (self.locked) return;
 
         if (self.sm.hot and rl.isMouseButtonReleased(rl.MouseButton.left)) {
@@ -146,10 +146,10 @@ pub const EditScreen = struct {
         }
     }
 
-    pub fn clearCanvas(self: *EditScreen) void {
+    pub fn clearCanvas(self: *EditScene) void {
         self.canvas.data = [_][CONF.SPRITE_SIZE]u8{[_]u8{0} ** CONF.SPRITE_SIZE} ** CONF.SPRITE_SIZE;
     }
-    pub fn draw(self: *EditScreen, mouse: rl.Vector2) !void {
+    pub fn draw(self: *EditScene, mouse: rl.Vector2) !void {
         // Navigation (top)
         const nav: rl.Vector2 = rl.Vector2.init(self.ui.pivots[PIVOTS.TOP_LEFT].x, self.ui.pivots[PIVOTS.TOP_LEFT].y);
         var nav_step = nav.x;
@@ -402,7 +402,7 @@ pub const EditScreen = struct {
         }
     }
 
-    fn draw_preview(self: EditScreen, x: i32, y: i32, down_scale: i32, background: rl.Color, frame: bool) void {
+    fn draw_preview(self: EditScene, x: i32, y: i32, down_scale: i32, background: rl.Color, frame: bool) void {
         const w: i32 = @divFloor(self.canvas.width, down_scale);
         const h: i32 = @divFloor(self.canvas.height, down_scale);
         rl.drawRectangle(x, y, w, h, background);
@@ -430,7 +430,7 @@ pub const EditScreen = struct {
         if (frame) rl.drawRectangleLines(x, y, w, h, DB16.STEEL_BLUE);
     }
 
-    fn export_to_ppm(self: *EditScreen) !void {
+    fn export_to_ppm(self: *EditScene) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const allocator = gpa.allocator();
