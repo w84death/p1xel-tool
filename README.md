@@ -1,11 +1,11 @@
 # P1Xel Editor
 
 ## About
-Sprite editor for my MS-DOS game. Made in Zig and Raylib.
+Sprite editor for my MS-DOS game. Made in Zig and [fenster](https://github.com/zserge/fenster).
 
 ### Features
 
-- Linux and Windows under 400KB binary
+- Linux and Windows under 40KiB binary
 - pixel perfect, 16x16 sprite/tile editor
 - DawBringer's 16 color palette
 - custom 4 color palette per tile
@@ -15,15 +15,17 @@ Sprite editor for my MS-DOS game. Made in Zig and Raylib.
 - save/load custom palettes
 - save/load tileset
 - organize tiles in tileset
-- animated background
+- preview mode with 3 layers
 
 ### Screenshots
 
-![menu window](media/alpha2-menu.png)
+![menu window](media/alpha5-menu.png)
 
-![edit window](media/alpha2-edit.png)
+![edit window](media/alpha5-edit.png)
 
-![tileset window](media/alpha2-tileset.png)
+![tileset window](media/alpha5-tileset.png)
+
+![preview window](media/alpha5-preview.png)
 
 ## Run
 ```
