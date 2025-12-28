@@ -111,7 +111,7 @@ pub const Tiles = struct {
                     y + yy * scale,
                     scale,
                     scale,
-                    self.palette.getColorFromIndex(db16_idx),
+                    self.palette.get_rgba_from_index(db16_idx),
                 );
             }
         }
