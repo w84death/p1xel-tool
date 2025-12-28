@@ -29,6 +29,7 @@ const Popup = enum {
     confirm_del,
     info_save_ok,
     info_save_fail,
+    select_tile,
 };
 
 const Tools = enum {
@@ -158,11 +159,11 @@ pub const EditScene = struct {
             self.sm.goTo(State.main_menu);
         }
         nav_step += 128 + 32;
-        if (self.fui.button(nav_step, nav.y, 180, 32, "Change tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 180, 32, "Tileset", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.sm.goTo(State.tileset);
         }
         nav_step += 188;
-        if (self.fui.button(nav_step, nav.y, 180, 32, "Preview tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 180, 32, "Preview", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.sm.goTo(State.preview);
         }
         nav_step += 188 + 32;
@@ -187,9 +188,20 @@ pub const EditScene = struct {
             };
             self.popup = Popup.info_save_ok;
         }
-        // Tools
+
+        // Tile
         const tx: i32 = self.canvas.x - 88;
         var ty: i32 = self.canvas.y;
+        if (self.fui.button(tx, ty, 64, 64, "", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.select_tile;
+            self.tiles.hot = true;
+        }
+        self.tiles.draw(self.tiles.selected, tx + 1, ty + 1);
+        self.fui.draw_rect_lines(tx, ty, CONF.SPRITE_SIZE * 4, CONF.SPRITE_SIZE * 4, DB16.STEEL_BLUE);
+        ty += 64 + 32;
+
+        // Tools
         self.fui.draw_text("TOOLS", tx, ty, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
         ty += 28;
         if (self.fui.button(tx, ty, 64, 64, "Pixel", if (self.tool == Tools.pixel) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
@@ -391,6 +403,16 @@ pub const EditScene = struct {
                             self.popup = Popup.none;
                             self.locked = false;
                             self.sm.hot = true;
+                        }
+                    }
+                },
+                Popup.select_tile => {
+                    if (self.tiles.showTilesSelector(mouse)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.locked = false;
+                            self.sm.hot = true;
+                            self.select();
                         }
                     }
                 },

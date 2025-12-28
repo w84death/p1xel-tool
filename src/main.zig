@@ -18,6 +18,7 @@ const EditScene = @import("scenes/edit.zig").EditScene;
 const AboutScene = @import("scenes/about.zig").AboutScene;
 const TilesetScene = @import("scenes/tileset.zig").TilesetScene;
 const PreviewScene = @import("scenes/preview.zig").PreviewScene;
+const Layer = @import("scenes/preview.zig").Layer;
 
 pub fn main() void {
     var buf: [CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined;
@@ -42,7 +43,8 @@ pub fn main() void {
     var about = AboutScene.init(fui, &sm);
     var edit = EditScene.init(fui, &sm, &pal, &tiles);
     var tileset = TilesetScene.init(fui, &sm, &pal, &tiles, &edit);
-    var preview = PreviewScene.init(fui, &sm, &edit, &pal, &tiles);
+    var layers: [CONF.PREVIEW_LAYERS]Layer = undefined;
+    var preview = PreviewScene.init(fui, &sm, &edit, &pal, &tiles, &layers);
     preview.loadPreviewFromFile();
 
     var shouldClose = false;

@@ -19,7 +19,7 @@ const Popup = enum {
     confirm_delete,
     select_tile,
 };
-const Layer = struct {
+pub const Layer = struct {
     data: [CONF.PREVIEW_H][CONF.PREVIEW_W]u8,
 };
 pub const PreviewScene = struct {
@@ -29,12 +29,11 @@ pub const PreviewScene = struct {
     palette: *Palette,
     tiles: *Tiles,
     tiles_area: Vec2,
-    layers: [CONF.PREVIEW_LAYERS]Layer = undefined,
+    layers: *[CONF.PREVIEW_LAYERS]Layer,
     selected: u8,
     locked: bool,
     popup: Popup,
-    pub fn init(fui: Fui, sm: *StateMachine, edit: *Edit, pal: *Palette, tiles: *Tiles) PreviewScene {
-        var layers: [CONF.PREVIEW_LAYERS]Layer = undefined;
+    pub fn init(fui: Fui, sm: *StateMachine, edit: *Edit, pal: *Palette, tiles: *Tiles, layers: *[CONF.PREVIEW_LAYERS]Layer) PreviewScene {
         for (0..CONF.PREVIEW_LAYERS) |i| {
             var data: [CONF.PREVIEW_H][CONF.PREVIEW_W]u8 = undefined;
             for (0..CONF.PREVIEW_H) |y| {
@@ -120,7 +119,7 @@ pub const PreviewScene = struct {
             self.sm.goTo(State.tileset);
         }
         nav_step += 188;
-        if (self.fui.button(nav_step, nav.y, 180, 32, "Edit tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 180, 32, "Editor", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.sm.goTo(State.editor);
         }
         nav_step += 188 + 32;
@@ -131,6 +130,11 @@ pub const PreviewScene = struct {
                 return;
             };
             self.popup = Popup.info_save_ok;
+        }
+        nav_step += 168;
+        if (self.fui.button(nav_step, nav.y, 160, 32, "Clear Preview", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
         }
 
         // Tile
