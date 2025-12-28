@@ -157,7 +157,7 @@ pub const Fui = struct {
     pub fn draw_text(self: *Fui, s: []const u8, x: i32, y: i32, scale: i32, color: u32) void {
         var px = x;
         for (s) |chr| {
-            if (chr >= 32) {
+            if (chr >= 32 and chr < 95 + 32) {
                 const bmh = Font[chr - 32];
                 var dy: i32 = 0;
                 while (dy < 5) : (dy += 1) {
@@ -214,5 +214,23 @@ pub const Fui = struct {
         const ver_x: i32 = self.pivots[PIVOTS.BOTTOM_RIGHT].x - center.x;
         const ver_y: i32 = self.pivots[PIVOTS.BOTTOM_RIGHT].y - center.y;
         self.draw_text(CONF.VERSION, ver_x, ver_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_SECONDARY);
+    }
+    fn draw_base_popup(self: Fui, message: [:0]const u8, bg_color: u32) Mouse {
+        _ = self;
+        _ = message;
+        _ = bg_color;
+    }
+    pub fn info_popup(self: Fui, message: [:0]const u8, mouse: Mouse, bg_color: u32) ?bool {
+        _ = self;
+        _ = message;
+        _ = mouse;
+        _ = bg_color;
+        return false;
+    }
+    pub fn yes_no_popup(self: Fui, message: [:0]const u8, mouse: Mouse) ?bool {
+        _ = self;
+        _ = message;
+        _ = mouse;
+        return false;
     }
 };

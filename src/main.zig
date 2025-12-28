@@ -38,7 +38,7 @@ pub fn main() void {
     var vfx = Vfx.init(fui);
     var menu = MenuScene.init(fui, &sm);
     var about = AboutScene.init(fui, &sm);
-    // var edit = EditScene.init(fui, &sm, &pal, &tiles);
+    var edit = EditScene.init(fui, &sm, &pal, &tiles);
     // To be ported
     // var tileset = TilesetScene.init(fui, &sm, &pal, &tiles, &edit);
     // var preview = PreviewScene.init(fui, &sm, &edit, &pal, &tiles);
@@ -65,9 +65,9 @@ pub fn main() void {
                 menu.draw(mouse);
             },
             State.editor => {
-                // edit.handleKeyboard();
-                // edit.handleMouse(mouse);
-                // try edit.draw(mouse);
+                edit.handleKeyboard();
+                edit.handleMouse(mouse);
+                try edit.draw(mouse);
             },
             State.about => {
                 about.draw(mouse);
