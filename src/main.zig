@@ -1,65 +1,91 @@
 const std = @import("std");
-const rl = @import("raylib");
-const Ui = @import("ui.zig").UI;
-const PIVOTS = @import("ui.zig").PIVOTS;
+const c = @cImport({
+    @cInclude("fenster.h");
+});
+const CONF = @import("config.zig").CONF;
+const PIVOTS = @import("fui.zig").PIVOTS;
 const DB16 = @import("palette.zig").DB16;
 const Palette = @import("palette.zig").Palette;
-const CONF = @import("config.zig").CONF;
 const StateMachine = @import("state.zig").StateMachine;
 const State = @import("state.zig").State;
 const Tiles = @import("tiles.zig").Tiles;
 const Vfx = @import("vfx.zig").Vfx;
+const Fui = @import("fui.zig").Fui;
+const Vec2 = @import("math.zig").Vec2;
+const Mouse = @import("math.zig").Mouse;
 const MenuScene = @import("scenes/menu.zig").MenuScene;
 const EditScene = @import("scenes/edit.zig").EditScene;
 const AboutScene = @import("scenes/about.zig").AboutScene;
 const TilesetScene = @import("scenes/tileset.zig").TilesetScene;
 const PreviewScene = @import("scenes/preview.zig").PreviewScene;
 
-pub fn main() !void {
-    const ui = Ui.init(CONF.THE_NAME);
+pub fn main() void {
+    var buf: [CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined;
+    var f = std.mem.zeroInit(c.fenster, .{
+        .width = CONF.SCREEN_W,
+        .height = CONF.SCREEN_H,
+        .title = CONF.THE_NAME,
+        .buf = &buf[0],
+    });
+    _ = c.fenster_open(&f);
+    defer c.fenster_close(&f);
+    var mouse_pressed = false;
+    var mouse_lock = false;
+    var fui = Fui.init(&buf);
     var sm = StateMachine.init(State.main_menu);
     var pal = Palette.init();
     pal.loadPalettesFromFile();
-    var tiles = Tiles.init(ui, &pal);
+    var tiles = Tiles.init(fui, &pal);
     tiles.loadTilesFromFile();
-    var menu = MenuScene.init(ui, &sm);
-    var edit = EditScene.init(ui, &sm, &pal, &tiles);
-    const about = AboutScene.init(ui, &sm);
-    var tileset = TilesetScene.init(ui, &sm, &pal, &tiles, &edit);
-    var vfx = try Vfx.init();
-    var preview = PreviewScene.init(ui, &sm, &edit, &pal, &tiles);
+    var vfx = Vfx.init(fui);
+    var menu = MenuScene.init(fui, &sm);
+    var about = AboutScene.init(fui, &sm);
+    var edit = EditScene.init(fui, &sm, &pal, &tiles);
+    var tileset = TilesetScene.init(fui, &sm, &pal, &tiles, &edit);
+    var preview = PreviewScene.init(fui, &sm, &edit, &pal, &tiles);
     preview.loadPreviewFromFile();
-    ui.createWindow();
-    defer ui.closeWindow();
-
-    rl.setTargetFPS(60);
-    rl.setMouseCursor(rl.MouseCursor.crosshair);
 
     var shouldClose = false;
-    while (!rl.windowShouldClose() and !shouldClose) {
-        const mouse = rl.getMousePosition();
-        const fps: f32 = @floatFromInt(rl.getFPS());
-        const dt: f32 = 1000 / fps;
+    var dt: f32 = 0.0;
+    var now: i64 = c.fenster_time();
+    while (!shouldClose and c.fenster_loop(&f) == 0) {
+        const d: f32 = @floatFromInt(c.fenster_time() - now);
+        dt = @as(f32, d / 1000.0);
+        now = c.fenster_time();
 
         sm.update();
-        rl.beginDrawing();
-        defer rl.endDrawing();
-
-        rl.clearBackground(CONF.COLOR_BG);
+        fui.clear_background(CONF.COLOR_BG);
         switch (sm.current) {
-            State.main_menu, State.about => vfx.draw(dt),
+            State.main_menu, State.about => vfx.draw(CONF.VFX_SNOW_COLOR, dt),
             else => {},
         }
-        ui.drawCursorLines(mouse);
+        fui.draw_cursor_lines(Vec2.init(f.x, f.y));
+
+        if (mouse_lock and mouse_pressed and f.mouse == 0) {
+            mouse_pressed = false;
+            mouse_lock = false;
+        } else if (!mouse_lock and !mouse_pressed and f.mouse == 1) {
+            mouse_pressed = true;
+            mouse_lock = true;
+        } else if (mouse_lock and !mouse_pressed and f.mouse == 0) {
+            mouse_pressed = false;
+            mouse_lock = false;
+        } else {
+            mouse_pressed = false;
+        }
+        const mouse = Mouse.init(f.x, f.y, mouse_pressed);
 
         switch (sm.current) {
             State.main_menu => {
                 menu.draw(mouse);
             },
             State.editor => {
-                edit.handleKeyboard();
+                edit.handleKeyboard(&f.keys);
                 edit.handleMouse(mouse);
                 try edit.draw(mouse);
+            },
+            State.tileset => {
+                try tileset.draw(mouse);
             },
             State.preview => {
                 preview.handleMouse(mouse);
@@ -68,16 +94,22 @@ pub fn main() !void {
             State.about => {
                 about.draw(mouse);
             },
-            State.tileset => {
-                try tileset.draw(mouse);
-            },
+        }
+
+        if (f.keys[27] != 0) {
+            break;
         }
 
         // Quit
-        if (ui.button(ui.pivots[PIVOTS.TOP_RIGHT].x - 80, ui.pivots[PIVOTS.TOP_RIGHT].y, 80, 32, "Quit", CONF.COLOR_MENU_SECONDARY, mouse)) {
+        if (fui.button(fui.pivots[PIVOTS.TOP_RIGHT].x - 80, fui.pivots[PIVOTS.TOP_RIGHT].y, 80, 32, "Quit", CONF.COLOR_MENU_NORMAL, mouse)) {
             shouldClose = true;
         }
         // Version
-        ui.drawVersion();
+        fui.draw_version();
+
+        const diff: i64 = 1000 / 60 - (c.fenster_time() - now);
+        if (diff > 0) {
+            c.fenster_sleep(diff);
+        }
     }
 }
