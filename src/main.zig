@@ -35,7 +35,7 @@ pub fn main() void {
     var fui = Fui.init(&buf);
     var sm = StateMachine.init(State.main_menu);
     var pal = Palette.init();
-    pal.loadPalettesFromFile();
+    pal.load_palettes_from_file();
     var tiles = Tiles.init(fui, &pal);
     tiles.load_tileset_from_file();
     var vfx = Vfx.init(fui);

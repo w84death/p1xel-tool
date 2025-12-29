@@ -83,9 +83,9 @@ pub const EditScene = struct {
                     50 => self.palette.swatch = 1, // '2'
                     51 => self.palette.swatch = 2, // '3'
                     52 => self.palette.swatch = 3, // '4'
-                    9 => self.palette.cyclePalette(), // Tab
-                    81 => self.palette.prevPalette(), // 'q'
-                    87 => self.palette.nextPalette(), // 'w'
+                    9 => self.palette.cycle_palettes(), // Tab
+                    81 => self.palette.change_palette_prev(), // 'q'
+                    87 => self.palette.change_palette_next(), // 'w'
                     69 => self.tool = Tools.pixel, // 'e'
                     82 => self.tool = Tools.fill, // 'r'
                     else => {},
@@ -298,14 +298,14 @@ pub const EditScene = struct {
         if (self.palette.count > 1) {
             if (self.palette.index > 0) {
                 if (self.fui.button(si_x, si_y, 64, 24, "<", CONF.COLOR_OK, mouse) and !self.locked) {
-                    self.palette.prevPalette();
+                    self.palette.change_palette_prev();
                     self.needs_saving = true;
                 }
             }
             si_x += 64 + 8;
             if (self.palette.index < self.palette.count - 1) {
                 if (self.fui.button(si_x, si_y, 64, 24, ">", CONF.COLOR_OK, mouse) and !self.locked) {
-                    self.palette.nextPalette();
+                    self.palette.change_palette_next();
                     self.needs_saving = true;
                 }
             }
@@ -323,12 +323,12 @@ pub const EditScene = struct {
 
         if (self.palette.updated) {
             if (self.fui.button(so_x, so_y, 120, 32, "Update", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-                self.palette.updatePalette();
+                self.palette.update_palette();
                 self.needs_saving = true;
             }
             so_x += 128;
             if (self.fui.button(so_x, so_y, 120, 32, "Save new", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-                self.palette.newPalette();
+                self.palette.new_palette();
                 self.needs_saving = true;
             }
             so_x += 128;
@@ -344,7 +344,7 @@ pub const EditScene = struct {
             const x_shift: i32 = @intCast(@mod(i, colors_in_row) * (pal_size + 6));
             const iy: i32 = @divFloor(i, colors_in_row) * (pal_size + 6);
             if (self.fui.button(pal_x + x_shift, pal_y + iy + 28, pal_size, pal_size, "", self.palette.get_rgba_from_index(i), mouse) and !self.locked) {
-                self.palette.swapCurrentSwatch(i);
+                self.palette.update_current_swatch(i);
             }
         }
 
@@ -380,7 +380,7 @@ pub const EditScene = struct {
                 Popup.confirm_del => {
                     if (self.fui.yes_no_popup("Delete swatch?", mouse)) |confirmed| {
                         if (confirmed) {
-                            self.palette.deletePalette();
+                            self.palette.delete_palette();
                         }
                         self.popup = Popup.none;
                         self.locked = false;

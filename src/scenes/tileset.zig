@@ -72,17 +72,15 @@ pub const TilesetScene = struct {
 
         const t_pos = Vec2.init(self.fui.pivots[PIVOTS.TOP_LEFT].x, self.fui.pivots[PIVOTS.TOP_LEFT].y + 64);
         const tiles_in_row: usize = 16;
-        inline for (0..CONF.MAX_TILES) |i| {
-            const x_shift: i32 = @intCast(@mod(i, tiles_in_row) * (CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 12));
-            const x: i32 = t_pos.x + x_shift;
-            const y: i32 = @divFloor(i, tiles_in_row) * (CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 12);
-            const size: i32 = CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 2;
-            const fx: i32 = x;
-            const fy: i32 = t_pos.y + y;
-            if (i < self.tiles.count) {
-                if (self.fui.button(fx, fy, size, size, "", DB16.BLACK, mouse)) {
-                    self.tiles.selected = i;
+        const size: i32 = CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 2;
 
+        inline for (0..CONF.MAX_TILES) |i| {
+            const x_shift: i32 = @intCast(@mod(i, tiles_in_row) * (CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 4));
+            const x: i32 = t_pos.x + x_shift;
+            const y: i32 = @divFloor(i, tiles_in_row) * (CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 4);
+            if (i < self.tiles.count) {
+                if (self.fui.button(x, t_pos.y + y, size, size, "", DB16.BLACK, mouse)) {
+                    self.tiles.selected = i;
                     self.edit.select();
                 }
                 self.tiles.draw(i, x + 1, t_pos.y + y + 1);

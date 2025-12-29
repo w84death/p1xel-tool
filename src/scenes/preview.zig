@@ -167,14 +167,16 @@ pub const PreviewScene = struct {
         // Playground
         const px: i32 = self.tiles_area.x;
         const py: i32 = self.tiles_area.y;
-        for (self.layers) |layer| {
-            for (0..CONF.PREVIEW_H) |y| {
-                for (0..CONF.PREVIEW_W) |x| {
-                    const tile = layer.data[y][x];
-                    if (tile < 255) {
-                        const xx: i32 = @intCast(x * CONF.PREVIEW_SIZE);
-                        const yy: i32 = @intCast(y * CONF.PREVIEW_SIZE);
-                        self.tiles.draw(tile, px + xx, py + yy);
+        if (!self.locked) {
+            for (self.layers) |layer| {
+                for (0..CONF.PREVIEW_H) |y| {
+                    for (0..CONF.PREVIEW_W) |x| {
+                        const tile = layer.data[y][x];
+                        if (tile < 255) {
+                            const xx: i32 = @intCast(x * CONF.PREVIEW_SIZE);
+                            const yy: i32 = @intCast(y * CONF.PREVIEW_SIZE);
+                            self.tiles.draw(tile, px + xx, py + yy);
+                        }
                     }
                 }
             }

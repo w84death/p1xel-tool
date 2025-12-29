@@ -57,7 +57,7 @@ pub const Palette = struct {
             else => DB16.BLACK,
         };
     }
-    pub fn loadPalettesFromFile(self: *Palette) void {
+    pub fn load_palettes_from_file(self: *Palette) void {
         const file = std.fs.cwd().openFile(CONF.PALETTES_FILE, .{}) catch {
             self.db[0] = .{ 0, 3, 7, 15 };
             self.current = self.db[0];
@@ -90,7 +90,7 @@ pub const Palette = struct {
             self.current = self.db[0];
         }
     }
-    pub fn savePalettesToFile(self: *Palette) void {
+    pub fn save_palettes_to_file(self: *Palette) void {
         var buf: [CONF.MAX_PALETTES * 4]u8 = undefined;
         for (0..self.count) |i| {
             buf[i * 4] = self.db[i][0];
@@ -103,21 +103,21 @@ pub const Palette = struct {
         defer file.close();
         _ = file.write(buf[0 .. self.count * 4]) catch return;
     }
-    pub fn updatePalette(self: *Palette) void {
+    pub fn update_palette(self: *Palette) void {
         self.db[self.index] = self.current;
-        self.savePalettesToFile();
+        self.save_palettes_to_file();
         self.updated = false;
     }
-    pub fn newPalette(self: *Palette) void {
+    pub fn new_palette(self: *Palette) void {
         if (self.count < CONF.MAX_PALETTES) {
             self.db[self.count] = self.current;
             self.index = self.count;
             self.count += 1;
-            self.savePalettesToFile();
+            self.save_palettes_to_file();
             self.updated = false;
         }
     }
-    pub fn deletePalette(self: *Palette) void {
+    pub fn delete_palette(self: *Palette) void {
         if (self.count <= 1) {
             return;
         }
@@ -130,27 +130,27 @@ pub const Palette = struct {
         self.index = if (self.index > 0) self.index - 1 else 0;
         self.current = self.db[self.index];
         self.updated = false;
-        self.savePalettesToFile();
+        self.save_palettes_to_file();
     }
-    pub fn swapCurrentSwatch(self: *Palette, new: u8) void {
+    pub fn update_current_swatch(self: *Palette, new: u8) void {
         self.current[self.swatch] = new;
         self.updated = true;
     }
-    pub fn cyclePalette(self: *Palette) void {
+    pub fn cycle_palettes(self: *Palette) void {
         if (self.count > 0) {
             self.index = @mod(self.index + 1, self.count);
             self.current = self.db[self.index];
             self.updated = false;
         }
     }
-    pub fn prevPalette(self: *Palette) void {
+    pub fn change_palette_prev(self: *Palette) void {
         if (self.count > 0 and self.index > 0) {
             self.index = self.index - 1;
             self.current = self.db[self.index];
             self.updated = false;
         }
     }
-    pub fn nextPalette(self: *Palette) void {
+    pub fn change_palette_next(self: *Palette) void {
         if (self.count > 0 and self.index < self.count - 1) {
             self.index = self.index + 1;
             self.current = self.db[self.index];
