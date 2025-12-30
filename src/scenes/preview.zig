@@ -21,6 +21,7 @@ const Popup = enum {
 };
 pub const Layer = struct {
     data: [CONF.PREVIEW_H][CONF.PREVIEW_W]u8,
+    visible: bool = false,
 };
 pub const PreviewScene = struct {
     fui: Fui,
@@ -42,6 +43,7 @@ pub const PreviewScene = struct {
                 }
             }
             layers[i].data = data;
+            layers[i].visible = false;
         }
         return PreviewScene{
             .fui = fui,
@@ -57,7 +59,7 @@ pub const PreviewScene = struct {
         };
     }
     pub fn handle_mouse(self: *PreviewScene, mouse: Mouse) void {
-        if (self.locked) return;
+        if (self.locked or !self.layers[self.selected].visible) return;
 
         if (self.sm.hot and !mouse.pressed) {
             self.sm.hot = false;
@@ -71,7 +73,9 @@ pub const PreviewScene = struct {
             if (mouse_cell_x >= 0 and mouse_cell_x < CONF.PREVIEW_W and
                 mouse_cell_y >= 0 and mouse_cell_y < CONF.PREVIEW_H)
             {
-                self.layers[self.selected].data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)] = self.tiles.selected;
+                var data = self.layers[self.selected].data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)];
+                data = if (data == self.tiles.selected) 255 else self.tiles.selected;
+                self.layers[self.selected].data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)] = data;
             }
         }
     }
@@ -104,6 +108,7 @@ pub const PreviewScene = struct {
             for (0..CONF.PREVIEW_H) |y| {
                 for (0..CONF.PREVIEW_W) |x| {
                     self.layers[l].data[y][x] = data[l * per_layer + y * CONF.PREVIEW_W + x];
+                    self.layers[l].visible = true;
                 }
             }
         }
@@ -131,11 +136,6 @@ pub const PreviewScene = struct {
             };
             self.popup = Popup.info_save_ok;
         }
-        nav_step += 168;
-        if (self.fui.button(nav_step, nav.y, 160, 32, "Clear Preview", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
-        }
 
         // Tile
 
@@ -152,6 +152,8 @@ pub const PreviewScene = struct {
         // Layers
         const lx: i32 = self.tiles_area.x - 72;
         var ly: i32 = ty + 128;
+        self.fui.draw_text("LAYERS:", lx, ly, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        ly += 24;
         if (self.fui.button(lx, ly, 64, 32, "1", if (self.selected == 0) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.selected = 0;
         }
@@ -163,19 +165,30 @@ pub const PreviewScene = struct {
         if (self.fui.button(lx, ly, 64, 32, "3", if (self.selected == 2) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.selected = 2;
         }
+        ly += 40 + 24;
+        self.fui.draw_text("VISIBLE:", lx, ly, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        ly += 24;
+        inline for (0..self.layers.len) |i| {
+            if (self.fui.button(lx, ly, 64, 32, if (self.layers[i].visible) "ON" else "OFF", if (self.layers[i].visible) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
+                self.layers[i].visible = !self.layers[i].visible;
+            }
+            ly += 40;
+        }
 
         // Playground
         const px: i32 = self.tiles_area.x;
         const py: i32 = self.tiles_area.y;
         if (!self.locked) {
             for (self.layers) |layer| {
-                for (0..CONF.PREVIEW_H) |y| {
-                    for (0..CONF.PREVIEW_W) |x| {
-                        const tile = layer.data[y][x];
-                        if (tile < 255) {
-                            const xx: i32 = @intCast(x * CONF.PREVIEW_SIZE);
-                            const yy: i32 = @intCast(y * CONF.PREVIEW_SIZE);
-                            self.tiles.draw(tile, px + xx, py + yy);
+                if (layer.visible) {
+                    for (0..CONF.PREVIEW_H) |y| {
+                        for (0..CONF.PREVIEW_W) |x| {
+                            const tile = layer.data[y][x];
+                            if (tile < 255) {
+                                const xx: i32 = @intCast(x * CONF.PREVIEW_SIZE);
+                                const yy: i32 = @intCast(y * CONF.PREVIEW_SIZE);
+                                self.tiles.draw(tile, px + xx, py + yy);
+                            }
                         }
                     }
                 }
@@ -184,6 +197,28 @@ pub const PreviewScene = struct {
         const pw: i32 = CONF.PREVIEW_SIZE * CONF.PREVIEW_W;
         const ph: i32 = CONF.PREVIEW_SIZE * CONF.PREVIEW_H;
         self.fui.draw_rect_lines(px, py, pw, ph, DB16.STEEL_BLUE);
+
+        const tools: Vec2 = Vec2.init(self.fui.pivots[PIVOTS.BOTTOM_LEFT].x, self.fui.pivots[PIVOTS.BOTTOM_LEFT].y - 32);
+        var tools_step = tools.x;
+        if (self.fui.button(tools_step, tools.y, 160, 32, "Move layer down", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+        tools_step += 168;
+        if (self.fui.button(tools_step, tools.y, 160, 32, "Move layer up", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+        tools_step += 168;
+        if (self.fui.button(tools_step, tools.y, 160, 32, "Clear layer", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
+        tools_step += 168;
+        if (self.fui.button(tools_step, tools.y, 160, 32, "Clear all layers", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+            self.locked = true;
+            self.popup = Popup.info_not_implemented;
+        }
 
         // Popups
         if (self.popup != Popup.none) {
