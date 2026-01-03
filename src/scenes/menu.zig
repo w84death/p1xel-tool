@@ -35,8 +35,12 @@ pub const MenuScene = struct {
         const cy: i32 = self.fui.pivots[PIVOTS.CENTER].y - 96;
 
         const welcome = "Welcome to the indexed pixelart editor!";
-        self.fui.draw_text(CONF.THE_NAME, cx - self.fui.text_center(CONF.THE_NAME, CONF.FONT_BIG).x, cy, CONF.FONT_BIG, CONF.COLOR_PRIMARY);
-        self.fui.draw_text(welcome, cx - self.fui.text_center(welcome, CONF.FONT_DEFAULT_SIZE).x, cy + 44, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        const tx: i32 = cx - self.fui.text_center(CONF.THE_NAME, CONF.FONT_BIG).x;
+        self.fui.draw_text(CONF.THE_NAME, tx + 4, cy + 4, CONF.FONT_BIG, CONF.COLOR_SECONDARY);
+
+        self.fui.draw_text(CONF.THE_NAME, tx, cy, CONF.FONT_BIG, CONF.COLOR_PRIMARY);
+
+        self.fui.draw_text(welcome, cx - self.fui.text_center(welcome, CONF.FONT_DEFAULT_SIZE).x, cy + 64, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
 
         var y: i32 = cy + 128;
         for (self.menu_items) |item| {

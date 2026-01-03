@@ -212,7 +212,10 @@ pub const Tiles = struct {
                 self.fui.draw_rect_lines(x, t_pos.y + y, size, size, DB16.LIGHT_GRAY);
             }
         }
-        if (self.fui.button(self.fui.pivots[PIVOTS.TOP_LEFT].x, self.fui.pivots[PIVOTS.TOP_LEFT].y, 80, 32, "Close", CONF.COLOR_MENU_NORMAL, mouse)) {
+        const bp_x: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].x;
+        const bp_y: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].y;
+        self.fui.draw_rect(bp_x, bp_y, 140, 80, CONF.COLOR_MENU_NORMAL);
+        if (self.fui.button(bp_x + 10, bp_y + 8, 120, 64, "Close", CONF.COLOR_MENU_NORMAL, mouse)) {
             return true;
         }
         return null;

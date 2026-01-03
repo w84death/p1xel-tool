@@ -167,7 +167,7 @@ pub const EditScene = struct {
             self.sm.goTo(State.preview);
         }
         nav_step += 188 + 32;
-        if (self.fui.button(nav_step, nav.y, 160, 32, "Save tile", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 160, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.tiles.db[self.tiles.selected].data = self.canvas.data;
             self.tiles.db[self.tiles.selected].pal = self.palette.index;
             self.tiles.update_pal32(self.tiles.selected);
@@ -180,7 +180,7 @@ pub const EditScene = struct {
             self.needs_saving = false;
         }
         nav_step += 168;
-        if (self.fui.button(nav_step, nav.y, 240, 32, "Export Tile (PPM)", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 240, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.export_to_ppm() catch {
                 self.popup = Popup.info_save_fail;
@@ -202,7 +202,7 @@ pub const EditScene = struct {
         ty += 64 + 32;
 
         // Tools
-        self.fui.draw_text("TOOLS", tx, ty, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        self.fui.draw_text("Tools", tx, ty, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
         ty += 28;
         if (self.fui.button(tx, ty, 64, 64, "Pixel", if (self.tool == Tools.pixel) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
             self.tool = Tools.pixel;
@@ -266,7 +266,7 @@ pub const EditScene = struct {
         const swa_x: i32 = px;
         const swa_y: i32 = py + 216;
         const swa_size: i32 = 48;
-        self.fui.draw_text("ACTIVE SWATCHES", swa_x, swa_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        self.fui.draw_text("Active Swatches", swa_x, swa_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
         inline for (0..4) |i| {
             const x_shift: i32 = @intCast(i * (swa_size + 6));
             const index: u8 = @intCast(i);
@@ -291,7 +291,7 @@ pub const EditScene = struct {
         var status_buf: [7:0]u8 = undefined;
         _ = std.fmt.bufPrintZ(&status_buf, "{d:0>2}/{d:0>2}", .{ self.palette.index + 1, self.palette.count }) catch {};
         self.fui.draw_text(&status_buf, si_x, si_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
-        si_x += 75;
+        si_x += 120;
         if (self.palette.count > 1) {
             if (self.palette.index > 0) {
                 if (self.fui.button(si_x, si_y, 64, 24, "<", CONF.COLOR_OK, mouse) and !self.locked) {
@@ -312,30 +312,29 @@ pub const EditScene = struct {
         // Swatches options
         var so_x: i32 = swa_x;
         const so_y: i32 = swa_y + 132;
-        if (self.palette.count > 1 and self.fui.button(so_x, so_y, 120, 32, "Del swatch", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+        if (self.palette.count > 1 and self.fui.button(so_x, so_y, 140, 32, "Delete", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.confirm_del;
         }
-        so_x += 128;
+        so_x += 148;
 
         if (self.palette.updated) {
-            if (self.fui.button(so_x, so_y, 120, 32, "Update", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.fui.button(so_x, so_y, 160, 32, "Update", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.palette.update_palette();
                 self.needs_saving = true;
             }
-            so_x += 128;
-            if (self.fui.button(so_x, so_y, 120, 32, "Save new", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            so_x += 168;
+            if (self.fui.button(so_x, so_y, 160, 32, "Save new", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.palette.new_palette();
                 self.needs_saving = true;
             }
-            so_x += 128;
         }
 
         // Palette
         const pal_x: i32 = swa_x;
         const pal_y: i32 = swa_y + 200;
         const pal_size: i32 = 32;
-        self.fui.draw_text("DB16 PALETTE", pal_x, pal_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        self.fui.draw_text("DB16 Palette", pal_x, pal_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
         const colors_in_row: usize = 4;
         inline for (0..16) |i| {
             const x_shift: i32 = @intCast(@mod(i, colors_in_row) * (pal_size + 6));

@@ -128,7 +128,7 @@ pub const PreviewScene = struct {
             self.sm.goTo(State.editor);
         }
         nav_step += 188 + 32;
-        if (self.fui.button(nav_step, nav.y, 160, 32, "Save Preview", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 160, 32, "Save", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.savePreviewToFile() catch {
                 self.popup = Popup.info_save_fail;
@@ -152,21 +152,21 @@ pub const PreviewScene = struct {
         // Layers
         const lx: i32 = self.tiles_area.x - 72;
         var ly: i32 = ty + 128;
-        self.fui.draw_text("LAYERS:", lx, ly, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        self.fui.draw_text("LAYERS:", lx, ly, CONF.FONT_SMOL, CONF.COLOR_PRIMARY);
         ly += 24;
-        if (self.fui.button(lx, ly, 64, 32, "1", if (self.selected == 0) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(lx, ly, 64, 32, "1", if (self.selected == 0) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
             self.selected = 0;
         }
         ly += 40;
-        if (self.fui.button(lx, ly, 64, 32, "2", if (self.selected == 1) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(lx, ly, 64, 32, "2", if (self.selected == 1) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
             self.selected = 1;
         }
         ly += 40;
-        if (self.fui.button(lx, ly, 64, 32, "3", if (self.selected == 2) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(lx, ly, 64, 32, "3", if (self.selected == 2) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
             self.selected = 2;
         }
         ly += 40 + 24;
-        self.fui.draw_text("VISIBLE:", lx, ly, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        self.fui.draw_text("VISIBLE:", lx, ly, CONF.FONT_SMOL, CONF.COLOR_PRIMARY);
         ly += 24;
         inline for (0..self.layers.len) |i| {
             if (self.fui.button(lx, ly, 64, 32, if (self.layers[i].visible) "ON" else "OFF", if (self.layers[i].visible) CONF.COLOR_MENU_NORMAL else CONF.COLOR_MENU_SECONDARY, mouse) and !self.locked) {
@@ -200,22 +200,18 @@ pub const PreviewScene = struct {
 
         const tools: Vec2 = Vec2.init(self.fui.pivots[PIVOTS.BOTTOM_LEFT].x, self.fui.pivots[PIVOTS.BOTTOM_LEFT].y - 32);
         var tools_step = tools.x;
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Move layer down", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        self.fui.draw_text("Move layer:", tools.x, tools.y - 20, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        if (self.fui.button(tools_step, tools.y, 160, 32, "Up", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.info_not_implemented;
         }
         tools_step += 168;
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Move layer up", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(tools_step, tools.y, 160, 32, "Down", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.info_not_implemented;
         }
-        tools_step += 168;
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Clear layer", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
-        }
-        tools_step += 168;
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Clear all layers", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+        tools_step += 188;
+        if (self.fui.button(tools_step, tools.y, 220, 32, "Clear layer", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.info_not_implemented;
         }

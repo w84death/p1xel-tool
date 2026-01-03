@@ -8,7 +8,7 @@ const Rect = @import("math.zig").Rect;
 const CONF = @import("config.zig").CONF;
 const Palette = @import("palette.zig").Palette;
 const DB16 = @import("palette.zig").DB16;
-const Font = @import("font.zig").Font;
+const Font = @import("font.zig").Font8x16;
 pub const PIVOTS = struct {
     pub const PADDING = 24;
     pub const CENTER = 0;
@@ -149,8 +149,7 @@ pub const Fui = struct {
         for (iy..(iy + ih)) |row| {
             for (ix..(ix + iw)) |col| {
                 const local_row = row - iy;
-                const local_col = col - ix;
-                if (local_row % 2 == local_col % 2) {
+                if (local_row % 4 != 1) {
                     self.put_pixel(@intCast(col), @intCast(row), color);
                 }
             }
@@ -200,27 +199,26 @@ pub const Fui = struct {
             if (chr >= 32 and chr < 95 + 32) {
                 const bmh = Font[chr - 32];
                 var dy: i32 = 0;
-                while (dy < 5) : (dy += 1) {
+                while (dy < CONF.FONT_HEIGHT) : (dy += 1) {
                     var dx: i32 = 0;
-                    while (dx < 3) : (dx += 1) {
-                        const bit: u4 = @intCast(dy * 3 + dx);
+                    while (dx < CONF.FONT_WIDTH) : (dx += 1) {
+                        const bit: u6 = @intCast(dy * CONF.FONT_WIDTH + dx);
                         if ((bmh >> bit) & 1 != 0) {
                             const rx: i32 = @intCast(dx * scale);
                             const ry: i32 = @intCast(dy * scale);
-                            if (x + rx >= 0 and ry >= 0) {
-                                self.draw_rect(px + rx, y + ry, scale, scale, color);
-                            }
+                            self.draw_rect(px + rx + 2, y + ry + 2, scale, scale, CONF.COLOR_SHADOW);
+                            self.draw_rect(px + rx, y + ry, scale, scale, color);
                         }
                     }
                 }
             }
-            px += 4 * @as(i32, scale);
+            px += @as(i32, CONF.FONT_WIDTH) * scale + 1;
         }
     }
     pub fn text_length(self: *Fui, s: []const u8, scale: i32) i32 {
         _ = self;
         const len: i32 = @intCast(s.len);
-        return len * scale * CONF.FONT_WIDTH + (len - 2) * scale;
+        return len * scale * CONF.FONT_WIDTH + (len - 1) * 2;
     }
     pub fn text_center(self: *Fui, s: []const u8, scale: i32) Vec2 {
         _ = self;

@@ -47,7 +47,7 @@ pub const TilesetScene = struct {
         }
         nav_step += 128 + 32;
 
-        if (self.fui.button(nav_step, nav.y, 180, 32, "Edit tile", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 180, 32, "Editor", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.sm.goTo(State.editor);
         }
         nav_step += 188;
@@ -56,7 +56,7 @@ pub const TilesetScene = struct {
         }
 
         nav_step += 188 + 32;
-        if (self.fui.button(nav_step, nav.y, 160, 32, "Save tiles", if (self.tiles.updated) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 180, 32, "Save", if (self.tiles.updated) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.tiles.save_tileset_to_file() catch {
                 self.popup = Popup.info_save_fail;
@@ -64,8 +64,8 @@ pub const TilesetScene = struct {
             };
             self.popup = Popup.info_save_ok;
         }
-        nav_step += 168;
-        if (self.fui.button(nav_step, nav.y, 160, 32, "Export tileset", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        nav_step += 188;
+        if (self.fui.button(nav_step, nav.y, 200, 32, "Export ASM", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.info_not_implemented;
         }
@@ -102,25 +102,26 @@ pub const TilesetScene = struct {
         const tools: Vec2 = Vec2.init(self.fui.pivots[PIVOTS.BOTTOM_LEFT].x, self.fui.pivots[PIVOTS.BOTTOM_LEFT].y - 32);
         var tools_step = tools.x;
 
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Duplicate", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(tools_step, tools.y, 180, 32, "Duplicate", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.tiles.duplicate_tile(self.tiles.selected);
         }
-        tools_step += 168;
+        tools_step += 188;
+        self.fui.draw_text("Shift tile:", tools_step, tools.y - 20, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
         if (self.tiles.selected > 0) {
-            if (self.fui.button(tools_step, tools.y, 160, 32, "<< Shift left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.fui.button(tools_step, tools.y, 160, 32, "<< Left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.tiles.shift_tile_left(self.tiles.selected);
                 self.tiles.selected -= 1;
             }
         }
         tools_step += 168;
         if (self.tiles.selected < self.tiles.count - 1) {
-            if (self.fui.button(tools_step, tools.y, 160, 32, "Shift right >>", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.fui.button(tools_step, tools.y, 160, 32, "Right >>", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.tiles.shift_tile_right(self.tiles.selected);
                 self.tiles.selected += 1;
             }
         }
         tools_step += 168;
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Delete tile", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+        if (self.fui.button(tools_step, tools.y, 180, 32, "Delete", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
             self.locked = true;
             self.popup = Popup.confirm_delete;
         }
