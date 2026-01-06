@@ -11,6 +11,7 @@
 #define _DEFAULT_SOURCE 1
 #include <X11/XKBlib.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <time.h>
 #endif
@@ -231,7 +232,7 @@ FENSTER_API int fenster_open(struct fenster *f) {
   wc.lpszClassName = f->title;
   RegisterClassEx(&wc);
   f->hwnd = CreateWindowEx(WS_EX_CLIENTEDGE, f->title, f->title,
-                           WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                           WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX, CW_USEDEFAULT, CW_USEDEFAULT,
                            f->width, f->height, NULL, NULL, hInstance, NULL);
 
   if (f->hwnd == NULL)
@@ -272,6 +273,11 @@ FENSTER_API int fenster_open(struct fenster *f) {
   XStoreName(f->dpy, f->w, f->title);
   XMapWindow(f->dpy, f->w);
   XSync(f->dpy, f->w);
+  XSizeHints hints = {0};
+  hints.flags = PMinSize | PMaxSize;
+  hints.min_width = hints.max_width = f->width;
+  hints.min_height = hints.max_height = f->height;
+  XSetWMNormalHints(f->dpy, f->w, &hints);
   f->img = XCreateImage(f->dpy, DefaultVisual(f->dpy, 0), 24, ZPixmap, 0,
                         (char *)f->buf, f->width, f->height, 32, 0);
   return 0;
