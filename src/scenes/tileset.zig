@@ -25,6 +25,7 @@ pub const TilesetScene = struct {
     tiles: *Tiles,
     edit: *Edit,
     selected: u8,
+    needs_saving: bool,
     locked: bool,
     popup: Popup,
     pub fn init(fui: Fui, sm: *StateMachine, pal: *Palette, tiles: *Tiles, edit: *Edit) TilesetScene {
@@ -34,6 +35,7 @@ pub const TilesetScene = struct {
             .tiles = tiles,
             .edit = edit,
             .selected = 0,
+            .needs_saving = false,
             .palette = pal,
             .locked = false,
             .popup = Popup.none,
@@ -56,7 +58,7 @@ pub const TilesetScene = struct {
         }
 
         nav_step += 188 + 32;
-        if (self.fui.button(nav_step, nav.y, 180, 32, "Save", if (self.tiles.updated) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(nav_step, nav.y, 180, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.tiles.save_tileset_to_file() catch {
                 self.popup = Popup.info_save_fail;
@@ -92,6 +94,7 @@ pub const TilesetScene = struct {
                 if (i == self.tiles.count) {
                     if (self.fui.button(x, t_pos.y + y, size, size, "+", CONF.COLOR_MENU_NORMAL, mouse)) {
                         try self.tiles.create_new();
+                        self.needs_saving = true;
                     }
                 } else {
                     self.fui.draw_rect_lines(x, t_pos.y + y, size, size, DB16.LIGHT_GRAY);
@@ -111,6 +114,7 @@ pub const TilesetScene = struct {
             if (self.fui.button(tools_step, tools.y, 160, 32, "<< Left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.tiles.shift_tile_left(self.tiles.selected);
                 self.tiles.selected -= 1;
+                self.needs_saving = true;
             }
         }
         tools_step += 168;
@@ -118,6 +122,7 @@ pub const TilesetScene = struct {
             if (self.fui.button(tools_step, tools.y, 160, 32, "Right >>", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.tiles.shift_tile_right(self.tiles.selected);
                 self.tiles.selected += 1;
+                self.needs_saving = true;
             }
         }
         tools_step += 168;
@@ -161,8 +166,8 @@ pub const TilesetScene = struct {
                     if (self.fui.yes_no_popup("Delete selected tile?", mouse)) |confirmed| {
                         if (confirmed) {
                             self.tiles.delete(self.tiles.selected);
-
                             self.tiles.selected = self.tiles.selected - 1;
+                            self.needs_saving = true;
                         }
                         self.popup = Popup.none;
                         self.locked = false;

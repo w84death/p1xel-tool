@@ -37,6 +37,11 @@ const Tools = enum {
     fill,
 };
 
+const BackgroundType = enum {
+    light,
+    dark,
+};
+
 pub const EditScene = struct {
     fui: Fui,
     sm: *StateMachine,
@@ -49,6 +54,7 @@ pub const EditScene = struct {
     needs_saving: bool,
     tool: Tools = Tools.pixel,
     status_buffer: [256]u8 = undefined,
+    bg_type: BackgroundType = BackgroundType.dark,
 
     pub fn init(fui: Fui, sm: *StateMachine, pal: *Palette, tiles: *Tiles) EditScene {
         const p: *Palette = pal;
@@ -71,6 +77,7 @@ pub const EditScene = struct {
             .popup = Popup.none,
             .needs_saving = false,
             .tool = Tools.pixel,
+            .bg_type = BackgroundType.dark,
         };
     }
     pub fn handle_keyboard(self: *EditScene, keys: *[256]c_int) void {
@@ -168,16 +175,7 @@ pub const EditScene = struct {
         }
         nav_step += 188 + 32;
         if (self.fui.button(nav_step, nav.y, 160, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.tiles.db[self.tiles.selected].data = self.canvas.data;
-            self.tiles.db[self.tiles.selected].pal = self.palette.index;
-            self.tiles.update_pal32(self.tiles.selected);
-            self.locked = true;
-            self.tiles.save_tileset_to_file() catch {
-                self.popup = Popup.info_save_fail;
-                return;
-            };
-            self.popup = Popup.info_save_ok;
-            self.needs_saving = false;
+            self.save_tiles();
         }
         nav_step += 168;
         if (self.fui.button(nav_step, nav.y, 240, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
@@ -229,7 +227,10 @@ pub const EditScene = struct {
 
                     if (idx == 0 and self.palette.current[0] == 0) {
                         const checker = (x + y) % 2 == 0;
-                        color = if (checker) 0xFF111111 else 0xFF222222;
+                        switch (self.bg_type) {
+                            BackgroundType.light => color = if (checker) 0xFF111111 else 0xFF222222,
+                            BackgroundType.dark => color = if (checker) 0xFFAAAAAA else 0xFFCCCCCC,
+                        }
                     } else {
                         color = self.palette.get_rgba_from_index(db16_idx);
                     }
@@ -250,6 +251,14 @@ pub const EditScene = struct {
             self.canvas.height,
             DB16.STEEL_BLUE,
         );
+        const yy: i32 = @intCast(CONF.SPRITE_SIZE * CONF.GRID_SIZE);
+
+        if (self.fui.button(self.canvas.x, self.canvas.y + yy + 24, 64, 64, "Light", DB16.WHITE, mouse)) {
+            self.bg_type = BackgroundType.light;
+        }
+        if (self.fui.button(self.canvas.x + 70, self.canvas.y + yy + 24, 64, 64, "Dark", DB16.BLACK, mouse)) {
+            self.bg_type = BackgroundType.dark;
+        }
 
         // Previews
         const px = self.canvas.x + self.canvas.width + 24;
@@ -321,12 +330,14 @@ pub const EditScene = struct {
         if (self.palette.updated) {
             if (self.fui.button(so_x, so_y, 160, 32, "Update", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.palette.update_palette();
-                self.needs_saving = true;
+                // self.needs_saving = true;
+                self.save_tiles();
             }
             so_x += 168;
             if (self.fui.button(so_x, so_y, 160, 32, "Save new", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
                 self.palette.new_palette();
-                self.needs_saving = true;
+                // self.needs_saving = true;
+                self.save_tiles();
             }
         }
 
@@ -415,7 +426,18 @@ pub const EditScene = struct {
             }
         }
     }
-
+    fn save_tiles(self: *EditScene) void {
+        self.tiles.db[self.tiles.selected].data = self.canvas.data;
+        self.tiles.db[self.tiles.selected].pal = self.palette.index;
+        self.tiles.update_pal32(self.tiles.selected);
+        self.locked = true;
+        self.tiles.save_tileset_to_file() catch {
+            self.popup = Popup.info_save_fail;
+            return;
+        };
+        self.popup = Popup.info_save_ok;
+        self.needs_saving = false;
+    }
     fn draw_tiled_live(self: *EditScene, x: i32, y: i32) void {
         const scale = CONF.PREVIEW_SCALE;
         for (0..CONF.SPRITE_SIZE) |py| {
