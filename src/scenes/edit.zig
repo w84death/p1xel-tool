@@ -227,10 +227,10 @@ pub const EditScene = struct {
         );
         const yy: i32 = @intCast(CONF.SPRITE_SIZE * CONF.GRID_SIZE);
 
-        if (self.fui.button(self.canvas.x, self.canvas.y + yy + 24, 160, 32, "Light", DB16.WHITE, mouse)) {
+        if (self.fui.button(self.canvas.x, self.canvas.y + yy + 24, 160, 32, "Light", if (self.bg_type == BackgroundType.light) CONF.COLOR_MENU_SECONDARY else CONF.COLOR_MENU_NORMAL, mouse)) {
             self.bg_type = BackgroundType.light;
         }
-        if (self.fui.button(self.canvas.x + 168, self.canvas.y + yy + 24, 160, 32, "Dark", DB16.BLACK, mouse)) {
+        if (self.fui.button(self.canvas.x + 168, self.canvas.y + yy + 24, 160, 32, "Dark", if (self.bg_type == BackgroundType.dark) CONF.COLOR_MENU_SECONDARY else CONF.COLOR_MENU_NORMAL, mouse)) {
             self.bg_type = BackgroundType.dark;
         }
 
@@ -331,7 +331,6 @@ pub const EditScene = struct {
 
         const options_x: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].x;
         var options_y: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 48;
-
 
         if (self.fui.button(options_x - 160, options_y, 160, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.save_tiles();
@@ -470,6 +469,7 @@ pub const EditScene = struct {
     }
     fn draw_tiled_live(self: *EditScene, x: i32, y: i32) void {
         const scale = CONF.PREVIEW_SCALE;
+        self.fui.draw_rect(x, y, scale * CONF.SPRITE_SIZE, scale * CONF.SPRITE_SIZE, if (self.bg_type == BackgroundType.light) 0xffffffFF else 0x000000);
         for (0..CONF.SPRITE_SIZE) |py| {
             const yy: i32 = @intCast(py);
             inline for (0..CONF.SPRITE_SIZE) |px| {
@@ -480,14 +480,16 @@ pub const EditScene = struct {
                 inline for (0..2) |i| {
                     const ii: i32 = @intCast(i);
                     inline for (0..2) |j| {
-                        const jj: i32 = @intCast(j);
-                        self.fui.draw_rect(
-                            x + jj + xx * scale,
-                            y + ii + yy * scale,
-                            scale,
-                            scale,
-                            color,
-                        );
+                        if (idx == 0 and self.palette.current[0] == 0) {} else {
+                            const jj: i32 = @intCast(j);
+                            self.fui.draw_rect(
+                                x + jj + xx * scale,
+                                y + ii + yy * scale,
+                                scale,
+                                scale,
+                                color,
+                            );
+                        }
                     }
                 }
             }
