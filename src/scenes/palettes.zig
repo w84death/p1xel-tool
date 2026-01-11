@@ -26,5 +26,24 @@ pub const PalettesScene = struct {
     }
     pub fn draw(self: *PalettesScene, mouse: Mouse) void {
         self.nav.draw(mouse);
+        const paletes_per_row: usize = 4;
+        var pal_x: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].x;
+        var pal_y: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].x+96;
+        var buf: [3:0]u8 = undefined;
+        for(0..self.pal.count) |pal| {
+            for(self.pal.db[pal]) |swatch| {
+                self.fui.draw_rect(pal_x, pal_y, 32, 64, self.pal.get_rgba_from_index(swatch));
+                _ = std.fmt.bufPrintZ(&buf, "{d}", .{ swatch }) catch {};
+                self.fui.draw_text(&buf,pal_x+8, pal_y+8, CONF.FONT_SMOL, CONF.COLOR_PRIMARY);
+                pal_x += 32;
+            }
+            self.fui.draw_text("00",pal_x+12, pal_y+8, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+            pal_x += 128;
+            if (@mod(pal+1,paletes_per_row) == 0){
+                pal_x = self.fui.pivots[PIVOTS.TOP_LEFT].x;
+                pal_y += 140;
+            }
+        }
+
     }
 };
