@@ -20,7 +20,7 @@ const Popup = enum {
     select_tile,
 };
 pub const Layer = struct {
-    data: [CONF.PREVIEW_H][CONF.PREVIEW_W]u8,
+    data: [CONF.MAX_PREVIEW_H][CONF.MAX_PREVIEW_W]u8,
     visible: bool = false,
 };
 pub const PreviewScene = struct {
@@ -33,14 +33,16 @@ pub const PreviewScene = struct {
     tiles_area: Vec2,
     layers: *[CONF.PREVIEW_LAYERS]Layer,
     selected: u8,
+    cam_x: usize = 0,
+    cam_y: usize = 0,
     locked: bool,
     iso_mode: bool = false,
     popup: Popup,
     pub fn init(fui: Fui, sm: *StateMachine, nav: *NavPanel, edit: *Edit, pal: *Palette, tiles: *Tiles, layers: *[CONF.PREVIEW_LAYERS]Layer) PreviewScene {
         for (0..CONF.PREVIEW_LAYERS) |i| {
-            var data: [CONF.PREVIEW_H][CONF.PREVIEW_W]u8 = undefined;
-            for (0..CONF.PREVIEW_H) |y| {
-                for (0..CONF.PREVIEW_W) |x| {
+            var data: [CONF.MAX_PREVIEW_H][CONF.MAX_PREVIEW_W]u8 = undefined;
+            for (0..CONF.MAX_PREVIEW_H) |y| {
+                for (0..CONF.MAX_PREVIEW_W) |x| {
                     data[y][x] = 255;
                 }
             }
@@ -77,19 +79,23 @@ pub const PreviewScene = struct {
             if (mouse_cell_x >= 0 and mouse_cell_x < CONF.PREVIEW_W and
                 mouse_cell_y >= 0 and mouse_cell_y < CONF.PREVIEW_H)
             {
-                var data = self.layers[self.selected].data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)];
-                data = if (data == self.tiles.selected) 255 else self.tiles.selected;
-                self.layers[self.selected].data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)] = data;
+                const data_y: i32 = mouse_cell_y + @as(i32, @intCast(self.cam_y));
+                const data_x: i32 = mouse_cell_x + @as(i32, @intCast(self.cam_x));
+                if (data_y >= 0 and data_y < CONF.MAX_PREVIEW_H and data_x >= 0 and data_x < CONF.MAX_PREVIEW_W) {
+                    var data = self.layers[self.selected].data[@intCast(data_y)][@intCast(data_x)];
+                    data = if (data == self.tiles.selected) 255 else self.tiles.selected;
+                    self.layers[self.selected].data[@intCast(data_y)][@intCast(data_x)] = data;
+                }
             }
         }
     }
     pub fn savePreviewToFile(self: *const PreviewScene) !void {
-        const per_layer = CONF.PREVIEW_H * CONF.PREVIEW_W;
-        var buf = [_]u8{0} ** (CONF.PREVIEW_LAYERS * CONF.PREVIEW_H * CONF.PREVIEW_W);
+        const per_layer = CONF.MAX_PREVIEW_H * CONF.MAX_PREVIEW_W;
+        var buf = [_]u8{0} ** (CONF.PREVIEW_LAYERS * CONF.MAX_PREVIEW_H * CONF.MAX_PREVIEW_W);
         for (0..CONF.PREVIEW_LAYERS) |l| {
-            for (0..CONF.PREVIEW_H) |y| {
-                for (0..CONF.PREVIEW_W) |x| {
-                    buf[l * per_layer + y * CONF.PREVIEW_W + x] = self.layers[l].data[y][x];
+            for (0..CONF.MAX_PREVIEW_H) |y| {
+                for (0..CONF.MAX_PREVIEW_W) |x| {
+                    buf[l * per_layer + y * CONF.MAX_PREVIEW_W + x] = self.layers[l].data[y][x];
                 }
             }
         }
@@ -98,7 +104,7 @@ pub const PreviewScene = struct {
         _ = try file.write(&buf);
     }
     pub fn loadPreviewFromFile(self: *PreviewScene) void {
-        const per_layer = CONF.PREVIEW_H * CONF.PREVIEW_W;
+        const per_layer = CONF.MAX_PREVIEW_H * CONF.MAX_PREVIEW_W;
         const file = std.fs.cwd().openFile(CONF.PREVIEW_FILE, .{}) catch {
             return;
         };
@@ -109,9 +115,9 @@ pub const PreviewScene = struct {
         defer std.heap.page_allocator.free(data);
         if (data.len < CONF.PREVIEW_LAYERS * per_layer) return;
         for (0..CONF.PREVIEW_LAYERS) |l| {
-            for (0..CONF.PREVIEW_H) |y| {
-                for (0..CONF.PREVIEW_W) |x| {
-                    self.layers[l].data[y][x] = data[l * per_layer + y * CONF.PREVIEW_W + x];
+            for (0..CONF.MAX_PREVIEW_H) |y| {
+                for (0..CONF.MAX_PREVIEW_W) |x| {
+                    self.layers[l].data[y][x] = data[l * per_layer + y * CONF.MAX_PREVIEW_W + x];
                     self.layers[l].visible = true;
                 }
             }
@@ -125,7 +131,7 @@ pub const PreviewScene = struct {
         const options_x: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].x;
         const options_y: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 64;
 
-        if (self.fui.button(options_x - 160, options_y, 160, 32, "Save", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        if (self.fui.button(options_x - 160, options_y, 160, CONF.MAX_PREVIEW_W, "Save", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.savePreviewToFile() catch {
                 self.popup = Popup.info_save_fail;
@@ -138,6 +144,30 @@ pub const PreviewScene = struct {
             self.iso_mode = !self.iso_mode;
         }
 
+        const tools_x = options_x - 120;
+        const tools_y = options_y + 124;
+
+        self.fui.draw_text("Move:", tools_x - 40, tools_y - 24, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+
+        if (self.fui.button(tools_x - 60, tools_y, 120, 32, "North", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.cam_y > 0) self.cam_y -= 1;
+        }
+        if (self.fui.button(tools_x - 60, tools_y + 80, 120, 32, "Shouth", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.cam_y < 48 - CONF.PREVIEW_H) self.cam_y += 1;
+        }
+        if (self.fui.button(tools_x - 60 - 65, tools_y + 40, 120, 32, "Left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.cam_x > 0) self.cam_x -= 1;
+        }
+        if (self.fui.button(tools_x - 60 + 65, tools_y + 40, 120, 32, "Right", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            if (self.cam_x < 32 - CONF.PREVIEW_W) self.cam_x += 1;
+        }
+
+        // tools_step += 88;
+        // if (self.fui.button(tools_step, tools.y, 120, 32, "Clear layer", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
+        //     self.locked = true;
+        //     self.popup = Popup.info_not_implemented;
+        // }
+        //
         // Tile
 
         const tx: i32 = self.tiles_area.x - 72;
@@ -181,16 +211,20 @@ pub const PreviewScene = struct {
         const px: i32 = self.tiles_area.x;
         const py: i32 = self.tiles_area.y;
         if (!self.locked) {
-            for (self.layers) |layer| {
+            for (self.layers.*) |layer| {
                 if (layer.visible) {
-                    for (0..CONF.PREVIEW_H) |y| {
-                        for (0..CONF.PREVIEW_W) |x| {
-                            const tile = layer.data[y][x];
+                    for (0..CONF.PREVIEW_H) |view_y| {
+                        for (0..CONF.PREVIEW_W) |view_x| {
+                            const data_y = self.cam_y + view_y;
+                            if (data_y >= 48) continue;
+                            const data_x = self.cam_x + view_x;
+                            if (data_x >= 32) continue;
+                            const tile = layer.data[data_y][data_x];
                             if (tile < 255) {
                                 const y_step = if (self.iso_mode) @as(i32, CONF.PREVIEW_SIZE / 2) else CONF.PREVIEW_SIZE;
-                                var xx: i32 = @intCast(@as(u64, x) * @as(u64, @intCast(CONF.PREVIEW_SIZE)));
-                                const yy: i32 = @intCast(@as(u64, y) * @as(u64, @intCast(y_step)));
-                                if (self.iso_mode and @rem(y, 2) == 1) {
+                                var xx: i32 = @intCast(@as(u64, view_x) * @as(u64, @intCast(CONF.PREVIEW_SIZE)));
+                                const yy: i32 = @intCast(@as(u64, view_y) * @as(u64, @intCast(y_step)));
+                                if (self.iso_mode and @rem(view_y, 2) == 1) {
                                     xx += @as(i32, CONF.PREVIEW_SIZE / 2);
                                 }
                                 self.tiles.draw(tile, px + xx, py + yy);
@@ -218,24 +252,6 @@ pub const PreviewScene = struct {
         const pw: i32 = if (self.iso_mode) CONF.PREVIEW_SIZE * CONF.PREVIEW_W + @as(i32, CONF.PREVIEW_SIZE / 2) else CONF.PREVIEW_SIZE * CONF.PREVIEW_W;
         const ph: i32 = if (self.iso_mode) @as(i32, CONF.PREVIEW_SIZE * CONF.PREVIEW_H / 2) + @as(i32, CONF.PREVIEW_SIZE / 2) else CONF.PREVIEW_SIZE * CONF.PREVIEW_H;
         self.fui.draw_rect_lines(px, py, pw, ph, DB16.STEEL_BLUE);
-
-        const tools: Vec2 = Vec2.init(self.fui.pivots[PIVOTS.BOTTOM_LEFT].x, self.fui.pivots[PIVOTS.BOTTOM_LEFT].y - 32);
-        var tools_step = tools.x;
-        self.fui.draw_text("Move layer:", tools.x, tools.y - 20, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Up", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
-        }
-        tools_step += 168;
-        if (self.fui.button(tools_step, tools.y, 160, 32, "Down", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
-        }
-        tools_step += 188;
-        if (self.fui.button(tools_step, tools.y, 220, 32, "Clear layer", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
-            self.locked = true;
-            self.popup = Popup.info_not_implemented;
-        }
 
         // Popups
         if (self.popup != Popup.none) {
