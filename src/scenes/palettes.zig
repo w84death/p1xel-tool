@@ -43,12 +43,20 @@ pub const PalettesScene = struct {
         const start_pal = self.current_page * CONF.PALETTES_PER_PAGE;
         const end_pal = @min(start_pal + CONF.PALETTES_PER_PAGE, self.pal.count);
         var pal_x: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].x;
-        var pal_y: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].x + 96;
+        var pal_y: i32 = self.fui.pivots[PIVOTS.TOP_LEFT].y + 96;
         var buf: [3:0]u8 = undefined;
 
         for (start_pal..end_pal) |pal| {
             const cur: u8 = @intCast(pal);
-            if (self.pal.index == cur) self.fui.draw_rect(pal_x - 8, pal_y - 8, 32 * 4 + 16, 64 + 16, CONF.COLOR_PRIMARY);
+
+            if (self.pal.index == cur) {
+                self.fui.draw_rect(pal_x - 8, pal_y - 8, 128 + 16, 64 + 16, CONF.COLOR_PRIMARY);
+            } else {
+                if (self.fui.button(pal_x, pal_y, 128, 64, " ", CONF.COLOR_MENU_NORMAL, mouse)) {
+                    self.pal.index = cur + 1;
+                    self.pal.change_palette_prev();
+                }
+            }
 
             for (self.pal.db[pal]) |swatch| {
                 self.fui.draw_rect(pal_x, pal_y, 32, 64, self.pal.get_rgba_from_index(swatch));
@@ -56,16 +64,11 @@ pub const PalettesScene = struct {
                 self.fui.draw_text(&buf, pal_x + 8, pal_y + 8, CONF.FONT_SMOL, CONF.COLOR_PRIMARY);
                 pal_x += 32;
             }
-            var count_buf: [3:0]u8 = undefined;
-            _ = std.fmt.bufPrintZ(&count_buf, "{d}", .{self.count_tiles_using_palette(cur)}) catch {};
-            self.fui.draw_text(&count_buf, pal_x + 16, pal_y + 8, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
-            if (self.pal.index != cur) {
-                if (self.fui.button(pal_x + 16, pal_y + 32, 64, 24, "THIS", CONF.COLOR_MENU_NORMAL, mouse)) {
-                    self.pal.index = cur;
-                }
-            }
 
-            pal_x += 128;
+            _ = std.fmt.bufPrintZ(&buf, "{d}", .{self.count_tiles_using_palette(cur)}) catch {};
+            self.fui.draw_text(&buf, pal_x + 16, pal_y + 8, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+
+            pal_x += 96;
             if (@mod((pal - start_pal) + 1, paletes_per_row) == 0) {
                 pal_x = self.fui.pivots[PIVOTS.TOP_LEFT].x;
                 pal_y += 80;
@@ -86,5 +89,13 @@ pub const PalettesScene = struct {
                 self.current_page += 1;
             }
         }
+
+        // Stats panel
+        const stats_x = self.fui.pivots[PIVOTS.TOP_RIGHT].x - 256;
+        const stats_y = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 128;
+        self.fui.draw_rect(stats_x, stats_y, 240, 40, CONF.COLOR_MENU_NORMAL);
+        var stats_buf: [14:0]u8 = undefined;
+        _ = std.fmt.bufPrintZ(&stats_buf, "Palettes: {d} ", .{self.pal.count}) catch {};
+        self.fui.draw_text(&stats_buf, stats_x + 10, stats_y + 10, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
     }
 };

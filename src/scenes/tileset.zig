@@ -121,6 +121,15 @@ pub const TilesetScene = struct {
             self.nav.locked = true;
             self.popup = Popup.info_not_implemented;
         }
+
+        // Stats panel
+        const stats_x = self.fui.pivots[PIVOTS.TOP_RIGHT].x - 256;
+        const stats_y = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 128;
+        self.fui.draw_rect(stats_x, stats_y, 200, 40, CONF.COLOR_MENU_NORMAL);
+        var stats_buf: [12:0]u8 = undefined;
+        _ = std.fmt.bufPrintZ(&stats_buf, "Tiles: {d} ", .{self.tiles.count}) catch {};
+        self.fui.draw_text(&stats_buf, stats_x + 10, stats_y + 10, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+
         // Popups
         if (self.popup != Popup.none) {
             self.fui.draw_rect(0, 0, CONF.SCREEN_W, CONF.SCREEN_H, CONF.POPUP_BG_ALPHA);
