@@ -16,6 +16,7 @@ const Mouse = @import("math.zig").Mouse;
 const MenuScene = @import("scenes/menu.zig").MenuScene;
 const EditScene = @import("scenes/edit.zig").EditScene;
 const AboutScene = @import("scenes/about.zig").AboutScene;
+const ComposerScene = @import("scenes/composer.zig").ComposerScene;
 const TilesetScene = @import("scenes/tileset.zig").TilesetScene;
 const PreviewScene = @import("scenes/preview.zig").PreviewScene;
 const PalettesScene = @import("scenes/palettes.zig").PalettesScene;
@@ -50,10 +51,12 @@ pub fn main() void {
     var preview = PreviewScene.init(fui, &sm, &nav, &edit, &pal, &tiles, &layers);
     preview.loadPreviewFromFile();
     var palettes = PalettesScene.init(fui, &sm, &nav, &pal, &tiles);
+    var composer = ComposerScene.init(fui, &sm);
 
     var shouldClose = false;
     var dt: f32 = 0.0;
     var now: i64 = c.fenster_time();
+
     while (!shouldClose and c.fenster_loop(&f) == 0) {
         const d: f32 = @floatFromInt(c.fenster_time() - now);
         dt = @as(f32, d / 1000.0);
@@ -102,6 +105,10 @@ pub fn main() void {
             },
             State.about => {
                 about.draw(mouse);
+            },
+            State.composer => {
+                composer.draw(mouse);
+                composer.update_audio();
             },
             State.quit => {
                 shouldClose = true;

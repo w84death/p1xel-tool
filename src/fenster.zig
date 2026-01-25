@@ -1,5 +1,5 @@
 const c = @cImport({
-    @cInclude("fenster.h");
+    @cInclude("libs/fenster.h");
 });
 
 pub const Fenster = struct {

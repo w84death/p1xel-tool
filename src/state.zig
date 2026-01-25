@@ -5,6 +5,7 @@ pub const State = enum {
     palettes,
     preview,
     about,
+    composer,
     quit,
 };
 pub const StateMachine = struct {

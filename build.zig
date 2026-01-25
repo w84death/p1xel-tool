@@ -17,10 +17,14 @@ pub fn build(b: *std.Build) void {
     exe.addIncludePath(b.path("src"));
 
     exe.addCSourceFile(.{ .file = b.path("src/fenster.c"), .flags = &[_][]const u8{} });
+    exe.addCSourceFile(.{ .file = b.path("src/fenster_audio.c"), .flags = &[_][]const u8{} });
     switch (target.result.os.tag) {
         .macos => exe.linkFramework("Cocoa"),
         .windows => exe.linkSystemLibrary("gdi32"),
-        .linux => exe.linkSystemLibrary("X11"),
+        .linux => {
+            exe.linkSystemLibrary("X11");
+            exe.linkSystemLibrary("asound");
+        },
         else => {},
     }
 

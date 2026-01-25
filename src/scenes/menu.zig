@@ -39,7 +39,7 @@ pub const MenuScene = struct {
                 .{
                     .title = "SFX",
                     .items = &[_]MenuItem{
-                        .{ .text = "Composer", .color = CONF.COLOR_MENU_NORMAL, .target_state = State.main_menu },
+                        .{ .text = "Composer", .color = CONF.COLOR_MENU_NORMAL, .target_state = State.composer },
                         .{ .text = "Effects", .color = CONF.COLOR_MENU_NORMAL, .target_state = State.main_menu },
                     },
                 },

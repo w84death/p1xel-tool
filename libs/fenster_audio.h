@@ -1,6 +1,9 @@
 #ifndef FENSTER_AUDIO_H
 #define FENSTER_AUDIO_H
 
+#include <stdint.h>
+#include <stddef.h>
+
 #ifndef FENSTER_SAMPLE_RATE
 #define FENSTER_SAMPLE_RATE 44100
 #endif
