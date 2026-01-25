@@ -271,13 +271,24 @@ FENSTER_API int fenster_open(struct fenster *f) {
                ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
                    ButtonReleaseMask | PointerMotionMask);
   XStoreName(f->dpy, f->w, f->title);
-  XMapWindow(f->dpy, f->w);
-  XSync(f->dpy, f->w);
+  
   XSizeHints hints = {0};
   hints.flags = PMinSize | PMaxSize;
   hints.min_width = hints.max_width = f->width;
   hints.min_height = hints.max_height = f->height;
   XSetWMNormalHints(f->dpy, f->w, &hints);
+
+  XClassHint *class_hint = XAllocClassHint();
+  if (class_hint) {
+    class_hint->res_name = (char *)"p1xel_tool";
+    class_hint->res_class = (char *)"p1xel_tool";
+    XSetClassHint(f->dpy, f->w, class_hint);
+    XFree(class_hint);
+  }
+
+  XMapWindow(f->dpy, f->w);
+  XSync(f->dpy, f->w);
+
   f->img = XCreateImage(f->dpy, DefaultVisual(f->dpy, 0), 24, ZPixmap, 0,
                         (char *)f->buf, f->width, f->height, 32, 0);
   return 0;
