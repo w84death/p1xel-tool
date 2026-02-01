@@ -1,11 +1,11 @@
 # P1Xel Editor
 
-![menu window](media/alpha7-menu.png)
+![menu window](media/alpha9-menu.png)
 
 ## About
 Sprite editor for my MS-DOS game. Made in Zig and [fenster](https://github.com/zserge/fenster).
 
-![edit window](media/alpha7-edit.png)
+![edit window](media/alpha9-editor.png)
 
 ### Features
 
@@ -21,9 +21,9 @@ Sprite editor for my MS-DOS game. Made in Zig and [fenster](https://github.com/z
 - organize tiles in tileset
 - preview mode with 3 layers
 
-![tileset window](media/alpha7-tileset.png)
-
-![preview window](media/alpha7-preview.png)
+![tileset window](media/alpha9-tileset.png)
+![palettes window](media/alpha9-palettes.png)
+![preview window](media/alpha9-preview.png)
 
 ## Run
 ```
