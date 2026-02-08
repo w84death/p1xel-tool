@@ -7,6 +7,11 @@ const PIVOTS = @import("fui.zig").PIVOTS;
 const Vec2 = @import("math.zig").Vec2;
 const Mouse = @import("math.zig").Mouse;
 
+pub const Layer = struct {
+    data: [CONF.MAX_PREVIEW_H][CONF.MAX_PREVIEW_W]u8,
+    visible: bool = false,
+};
+
 pub const Tile = struct {
     w: f32,
     h: f32,
@@ -33,14 +38,16 @@ pub const Tiles = struct {
     count: u8 = 0,
     fui: Fui,
     palette: *Palette,
+    layers: ?*[CONF.PREVIEW_LAYERS]Layer = null,
     updated: bool = false,
     hot: bool = false,
-    pub fn init(fui: Fui, palette: *Palette) Tiles {
+    pub fn init(fui: Fui, palette: *Palette, layers: ?*[CONF.PREVIEW_LAYERS]Layer) Tiles {
         return Tiles{
             .db = undefined,
             .selected = 0,
             .fui = fui,
             .palette = palette,
+            .layers = layers,
             .count = 1,
             .updated = false,
         };
@@ -217,6 +224,20 @@ pub const Tiles = struct {
         while (i < self.count - 1) : (i += 1) {
             self.db[i] = self.db[i + 1];
         }
+        if (self.layers != null) {
+            for (0..CONF.PREVIEW_LAYERS) |l| {
+                for (0..CONF.MAX_PREVIEW_H) |y| {
+                    for (0..CONF.MAX_PREVIEW_W) |x| {
+                        const val = self.layers.?[l].data[y][x];
+                        if (val > index and val < 255) {
+                            self.layers.?[l].data[y][x] = @intCast(val - 1);
+                        } else if (val == index) {
+                            self.layers.?[l].data[y][x] = 255;
+                        }
+                    }
+                }
+            }
+        }
         self.count -= 1;
         self.updated = true;
         return;
@@ -226,6 +247,20 @@ pub const Tiles = struct {
             const temp = self.db[index];
             self.db[index] = self.db[index - 1];
             self.db[index - 1] = temp;
+            if (self.layers != null) {
+                for (0..CONF.PREVIEW_LAYERS) |l| {
+                    for (0..CONF.MAX_PREVIEW_H) |y| {
+                        for (0..CONF.MAX_PREVIEW_W) |x| {
+                            const val = self.layers.?[l].data[y][x];
+                            if (val == index) {
+                                self.layers.?[l].data[y][x] = @intCast(index - 1);
+                            } else if (val == index - 1) {
+                                self.layers.?[l].data[y][x] = @intCast(index);
+                            }
+                        }
+                    }
+                }
+            }
             self.updated = true;
         }
     }
@@ -234,6 +269,20 @@ pub const Tiles = struct {
             const temp = self.db[index];
             self.db[index] = self.db[index + 1];
             self.db[index + 1] = temp;
+            if (self.layers != null) {
+                for (0..CONF.PREVIEW_LAYERS) |l| {
+                    for (0..CONF.MAX_PREVIEW_H) |y| {
+                        for (0..CONF.MAX_PREVIEW_W) |x| {
+                            const val = self.layers.?[l].data[y][x];
+                            if (val == index) {
+                                self.layers.?[l].data[y][x] = @intCast(index + 1);
+                            } else if (val == index + 1) {
+                                self.layers.?[l].data[y][x] = @intCast(index);
+                            }
+                        }
+                    }
+                }
+            }
             self.updated = true;
         }
     }

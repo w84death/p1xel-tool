@@ -19,10 +19,7 @@ const Popup = enum {
     confirm_delete,
     select_tile,
 };
-pub const Layer = struct {
-    data: [CONF.MAX_PREVIEW_H][CONF.MAX_PREVIEW_W]u8,
-    visible: bool = false,
-};
+const Layer = @import("../tiles.zig").Layer;
 pub const PreviewScene = struct {
     fui: Fui,
     sm: *StateMachine,

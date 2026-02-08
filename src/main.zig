@@ -21,7 +21,7 @@ const ComposerScene = @import("scenes/composer.zig").ComposerScene;
 const TilesetScene = @import("scenes/tileset.zig").TilesetScene;
 const PreviewScene = @import("scenes/preview.zig").PreviewScene;
 const PalettesScene = @import("scenes/palettes.zig").PalettesScene;
-const Layer = @import("scenes/preview.zig").Layer;
+const Layer = @import("tiles.zig").Layer;
 const NavPanel = @import("nav.zig").NavPanel;
 
 pub fn main() void {
@@ -41,14 +41,15 @@ pub fn main() void {
     var nav = NavPanel.init(fui, &sm);
     var pal = Palette.init();
     pal.load_palettes_from_file();
-    var tiles = Tiles.init(fui, &pal);
+    var layers: [CONF.PREVIEW_LAYERS]Layer = undefined;
+    var tiles = Tiles.init(fui, &pal, &layers);
     tiles.load_tileset_from_file();
     var vfx = Vfx.init(fui);
     var menu = MenuScene.init(fui, &sm);
     var about = AboutScene.init(fui, &sm);
     var edit = EditScene.init(fui, &sm, &nav, &pal, &tiles);
     var tileset = TilesetScene.init(fui, &sm, &nav, &pal, &tiles, &edit);
-    var layers: [CONF.PREVIEW_LAYERS]Layer = undefined;
+
     var preview = PreviewScene.init(fui, &sm, &nav, &edit, &pal, &tiles, &layers);
     preview.loadPreviewFromFile();
     var palettes = PalettesScene.init(fui, &sm, &nav, &pal, &tiles);
