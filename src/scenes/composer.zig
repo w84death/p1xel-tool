@@ -77,6 +77,51 @@ const HIGH_NOTES = [_]NoteDef{
 
 const MAX_NOTES = MAX_VISIBLE_NOTES;
 
+// Music theory helpers
+const NoteLetter = enum {
+    C,
+    Cs,
+    D,
+    Ds,
+    E,
+    F,
+    Fs,
+    G,
+    Gs,
+    A,
+    As,
+    B,
+};
+
+fn getNoteLetter(id: usize) ?NoteLetter {
+    // Note IDs are sequential: C2=1, Cs2=2, D2=3, etc.
+    // Each octave has 12 notes (1-12 for octave 2, 13-24 for octave 3, etc.)
+    if (id == AudioMod.NOTE_REST) return null;
+    const octave_offset = (id - 1) % 12;
+    return switch (octave_offset) {
+        0 => .C,
+        1 => .Cs,
+        2 => .D,
+        3 => .Ds,
+        4 => .E,
+        5 => .F,
+        6 => .Fs,
+        7 => .G,
+        8 => .Gs,
+        9 => .A,
+        10 => .As,
+        11 => .B,
+        else => unreachable,
+    };
+}
+
+fn noteLettersMatch(id1: usize, id2: usize) bool {
+    const l1 = getNoteLetter(id1);
+    const l2 = getNoteLetter(id2);
+    if (l1 == null or l2 == null) return false;
+    return l1.? == l2.?;
+}
+
 fn getNoteName(id: usize) [:0]const u8 {
     for (LOW_NOTES) |n| {
         if (n.id == id) return n.name;
@@ -104,6 +149,7 @@ pub const ComposerScene = struct {
     mode: ComposerMode,
     preview_buf: [1]Note,
     prev_mouse_pressed: bool = false,
+    selected_letter: ?NoteLetter = null,
 
     pub fn init(fui: Fui, sm: *StateMachine) ComposerScene {
         return ComposerScene{
@@ -115,6 +161,7 @@ pub const ComposerScene = struct {
             .mode = .Insert,
             .preview_buf = undefined,
             .prev_mouse_pressed = false,
+            .selected_letter = null,
         };
     }
 
@@ -211,10 +258,14 @@ pub const ComposerScene = struct {
 
         // Rest button row
         const rest_y = palette_y + 108;
-        if (self.fui.button(px, rest_y, 60, 28, "REST", CONF.COLOR_MENU_SECONDARY, click_mouse)) {
+        const rest_color: u32 = if (self.selected_letter == null) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_SECONDARY;
+        if (self.fui.button(px, rest_y, 60, 28, "REST", rest_color, click_mouse)) {
             self.audio.stop_tune();
             self.preview_buf[0] = .{ .id = AudioMod.NOTE_REST, .dur = NOTE_DURATION };
             self.audio.play_tune(&self.preview_buf);
+
+            // Reset the selected letter
+            self.selected_letter = null;
 
             if (self.mode == .Insert and self.melody_len < MAX_NOTES) {
                 self.melody[self.melody_len] = .{ .id = AudioMod.NOTE_REST, .dur = NOTE_DURATION };
@@ -227,10 +278,25 @@ pub const ComposerScene = struct {
         self.fui.draw_text(label, x, y + 6, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_MENU_TEXT);
         var btn_x = x + 80 + 8;
         for (notes) |note_def| {
-            if (self.fui.button(btn_x, y, 80, 28, note_def.name, CONF.COLOR_MENU_NORMAL, click_mouse)) {
+            // Determine button color based on music theory matching
+            var btn_color: u32 = CONF.COLOR_MENU_NORMAL;
+            if (self.selected_letter) |sel| {
+                const note_letter = getNoteLetter(note_def.id);
+                if (note_letter) |nl| {
+                    if (nl == sel) {
+                        // Same note letter across octaves - highlight!
+                        btn_color = CONF.COLOR_MENU_HIGHLIGHT;
+                    }
+                }
+            }
+
+            if (self.fui.button(btn_x, y, 80, 28, note_def.name, btn_color, click_mouse)) {
                 self.audio.stop_tune();
                 self.preview_buf[0] = .{ .id = note_def.id, .dur = NOTE_DURATION };
                 self.audio.play_tune(&self.preview_buf);
+
+                // Set this note's letter as the selected one
+                self.selected_letter = getNoteLetter(note_def.id);
 
                 if (self.mode == .Insert and self.melody_len < MAX_NOTES) {
                     self.melody[self.melody_len] = .{ .id = note_def.id, .dur = NOTE_DURATION };
