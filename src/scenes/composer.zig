@@ -15,6 +15,10 @@ const Tune = AudioMod.Tune;
 const sample_rate = 44100.0;
 const samples_per_frame = @as(usize, @intFromFloat(sample_rate / 30.0));
 
+const COMPOSITIONS_FILE = "compositions.dat";
+const MAX_TUNES = 16;
+const MAX_NOTES_PER_TUNE = MAX_VISIBLE_NOTES;
+
 const NoteDef = struct {
     name: [:0]const u8,
     id: usize,
@@ -140,29 +144,249 @@ const ComposerMode = enum {
     Preview,
 };
 
+// Single tune storage
+const TuneData = struct {
+    notes: [MAX_NOTES_PER_TUNE]Note,
+    len: usize,
+};
+
+// File format header
+const CompositionHeader = packed struct {
+    magic: u32, // 'P1XM' = 0x5031584D
+    version: u8,
+    num_tunes: u8,
+    _pad: u16,
+};
+
 pub const ComposerScene = struct {
     fui: Fui,
     sm: *StateMachine,
     audio: Audio,
-    melody: [MAX_NOTES]Note,
-    melody_len: usize,
+    // Multiple tunes storage
+    tunes: [MAX_TUNES]TuneData,
+    current_tune: usize,
+    num_tunes: usize,
+    // Current working melody (reference to active tune)
+    melody: []Note,
+    melody_len: *usize,
     mode: ComposerMode,
     preview_buf: [1]Note,
     prev_mouse_pressed: bool = false,
     selected_letter: ?NoteLetter = null,
+    // File status
+    save_status: ?SaveStatus = null,
+    save_status_timer: f32 = 0.0,
+
+    const SaveStatus = enum {
+        saved,
+        loaded,
+        error_save,
+        error_load,
+    };
 
     pub fn init(fui: Fui, sm: *StateMachine) ComposerScene {
-        return ComposerScene{
+        var scene = ComposerScene{
             .fui = fui,
             .sm = sm,
             .audio = Audio.init(),
+            .tunes = undefined,
+            .current_tune = 0,
+            .num_tunes = 1,
             .melody = undefined,
-            .melody_len = 0,
+            .melody_len = undefined,
             .mode = .Insert,
             .preview_buf = undefined,
             .prev_mouse_pressed = false,
             .selected_letter = null,
+            .save_status = null,
+            .save_status_timer = 0.0,
         };
+
+        // Initialize all tunes as empty
+        for (0..MAX_TUNES) |i| {
+            scene.tunes[i] = TuneData{
+                .notes = undefined,
+                .len = 0,
+            };
+        }
+
+        // Set initial working tune
+        scene.melody = scene.tunes[0].notes[0..];
+        scene.melody_len = &scene.tunes[0].len;
+
+        // Try to load existing compositions
+        scene.loadCompositions();
+
+        return scene;
+    }
+
+    // Get current melody as a slice
+    fn getCurrentMelody(self: *ComposerScene) []Note {
+        return self.tunes[self.current_tune].notes[0..self.tunes[self.current_tune].len];
+    }
+
+    // Switch to a different tune
+    fn switchTune(self: *ComposerScene, tune_idx: usize) void {
+        if (tune_idx >= self.num_tunes) return;
+        self.current_tune = tune_idx;
+        self.melody = self.tunes[tune_idx].notes[0..];
+        self.melody_len = &self.tunes[tune_idx].len;
+        self.audio.stop_tune();
+    }
+
+    // Add a new tune
+    fn addTune(self: *ComposerScene) bool {
+        if (self.num_tunes >= MAX_TUNES) return false;
+        self.tunes[self.num_tunes] = TuneData{
+            .notes = undefined,
+            .len = 0,
+        };
+        self.num_tunes += 1;
+        self.switchTune(self.num_tunes - 1);
+        return true;
+    }
+
+    // Remove current tune
+    fn removeCurrentTune(self: *ComposerScene) bool {
+        if (self.num_tunes <= 1) return false; // Keep at least one tune
+
+        // Shift tunes down
+        var i = self.current_tune;
+        while (i < self.num_tunes - 1) : (i += 1) {
+            self.tunes[i] = self.tunes[i + 1];
+        }
+
+        self.num_tunes -= 1;
+
+        // Adjust current tune if needed
+        if (self.current_tune >= self.num_tunes) {
+            self.current_tune = self.num_tunes - 1;
+        }
+
+        self.switchTune(self.current_tune);
+        return true;
+    }
+
+    // Save compositions to file
+    fn saveCompositions(self: *ComposerScene) void {
+        const header = CompositionHeader{
+            .magic = 0x5031584D, // 'P1XM'
+            .version = 1,
+            .num_tunes = @intCast(self.num_tunes),
+            ._pad = 0,
+        };
+
+        // Calculate file size: header + num_tunes * (len + notes)
+        var total_size: usize = @sizeOf(CompositionHeader);
+        for (0..self.num_tunes) |i| {
+            total_size += @sizeOf(u16); // length field
+            total_size += self.tunes[i].len * @sizeOf(Note);
+        }
+
+        var buf: [MAX_TUNES * (MAX_NOTES_PER_TUNE * @sizeOf(Note) + @sizeOf(u16)) + @sizeOf(CompositionHeader)]u8 = undefined;
+        var offset: usize = 0;
+
+        // Write header
+        @memcpy(buf[offset .. offset + @sizeOf(CompositionHeader)], std.mem.asBytes(&header));
+        offset += @sizeOf(CompositionHeader);
+
+        // Write each tune
+        for (0..self.num_tunes) |i| {
+            const tune = &self.tunes[i];
+            const len: u16 = @intCast(tune.len);
+            @memcpy(buf[offset .. offset + @sizeOf(u16)], std.mem.asBytes(&len));
+            offset += @sizeOf(u16);
+
+            if (tune.len > 0) {
+                const notes_bytes = std.mem.sliceAsBytes(tune.notes[0..tune.len]);
+                @memcpy(buf[offset .. offset + notes_bytes.len], notes_bytes);
+                offset += notes_bytes.len;
+            }
+        }
+
+        const file = std.fs.cwd().createFile(COMPOSITIONS_FILE, .{}) catch {
+            self.save_status = .error_save;
+            self.save_status_timer = 2.0;
+            return;
+        };
+        defer file.close();
+
+        _ = file.write(buf[0..offset]) catch {
+            self.save_status = .error_save;
+            self.save_status_timer = 2.0;
+            return;
+        };
+
+        self.save_status = .saved;
+        self.save_status_timer = 2.0;
+    }
+
+    // Load compositions from file
+    fn loadCompositions(self: *ComposerScene) void {
+        const file = std.fs.cwd().openFile(COMPOSITIONS_FILE, .{}) catch {
+            // File doesn't exist, start with empty tunes
+            return;
+        };
+        defer file.close();
+
+        const file_size = file.getEndPos() catch {
+            self.save_status = .error_load;
+            self.save_status_timer = 2.0;
+            return;
+        };
+
+        if (file_size < @sizeOf(CompositionHeader)) {
+            self.save_status = .error_load;
+            self.save_status_timer = 2.0;
+            return;
+        }
+
+        var header: CompositionHeader = undefined;
+        _ = file.read(std.mem.asBytes(&header)) catch {
+            self.save_status = .error_load;
+            self.save_status_timer = 2.0;
+            return;
+        };
+
+        if (header.magic != 0x5031584D or header.version != 1) {
+            self.save_status = .error_load;
+            self.save_status_timer = 2.0;
+            return;
+        }
+
+        const num_tunes = @min(header.num_tunes, MAX_TUNES);
+        self.num_tunes = num_tunes;
+
+        // Read each tune
+        for (0..num_tunes) |i| {
+            var len: u16 = 0;
+            _ = file.read(std.mem.asBytes(&len)) catch {
+                self.save_status = .error_load;
+                self.save_status_timer = 2.0;
+                return;
+            };
+
+            const actual_len = @min(len, MAX_NOTES_PER_TUNE);
+            self.tunes[i].len = actual_len;
+
+            if (actual_len > 0) {
+                const notes_bytes = std.mem.sliceAsBytes(self.tunes[i].notes[0..actual_len]);
+                _ = file.read(notes_bytes) catch {
+                    self.save_status = .error_load;
+                    self.save_status_timer = 2.0;
+                    return;
+                };
+            }
+        }
+
+        // Ensure at least one tune exists
+        if (self.num_tunes == 0) {
+            self.num_tunes = 1;
+            self.tunes[0].len = 0;
+        }
+
+        self.save_status = .loaded;
+        self.save_status_timer = 2.0;
     }
 
     pub fn draw(self: *ComposerScene, mouse: Mouse) void {
@@ -172,16 +396,25 @@ pub const ComposerScene = struct {
         const px = self.fui.pivots[PIVOTS.TOP_LEFT].x;
         const py = self.fui.pivots[PIVOTS.TOP_LEFT].y;
 
+        // Update save status timer
+        if (self.save_status_timer > 0.0) {
+            self.save_status_timer -= 0.016; // Approximate dt
+            if (self.save_status_timer <= 0.0) {
+                self.save_status = null;
+            }
+        }
+
         // Navigation
         if (self.fui.button(px, py, 120, 32, "< Menu", CONF.COLOR_MENU_SECONDARY, click_mouse)) {
             self.audio.stop_tune();
+            self.saveCompositions(); // Auto-save on exit
             self.sm.goTo(State.main_menu);
         }
 
         // Playback Controls
         if (self.fui.button(px + 130, py, 100, 32, "Play", CONF.COLOR_MENU_NORMAL, click_mouse)) {
-            if (self.melody_len > 0) {
-                self.audio.play_tune(self.melody[0..self.melody_len]);
+            if (self.tunes[self.current_tune].len > 0) {
+                self.audio.play_tune(self.getCurrentMelody());
             }
         }
         if (self.fui.button(px + 240, py, 100, 32, "Stop", CONF.COLOR_MENU_NORMAL, click_mouse)) {
@@ -189,7 +422,61 @@ pub const ComposerScene = struct {
         }
         if (self.fui.button(px + 350, py, 100, 32, "Clear", CONF.COLOR_MENU_DANGER, click_mouse)) {
             self.audio.stop_tune();
-            self.melody_len = 0;
+            self.tunes[self.current_tune].len = 0;
+        }
+
+        // Tune selector
+        const tune_y = py + 40;
+        self.fui.draw_text("Tune:", px + 460, tune_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_MENU_TEXT);
+
+        var tune_btn_x = px + 520;
+        var tune_idx: usize = 0;
+        while (tune_idx < self.num_tunes) : (tune_idx += 1) {
+            var buf: [4:0]u8 = undefined;
+            _ = std.fmt.bufPrintZ(&buf, "{d}", .{tune_idx + 1}) catch {};
+            const color: u32 = if (tune_idx == self.current_tune) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL;
+
+            if (self.fui.button(tune_btn_x, tune_y - 4, 32, 28, &buf, color, click_mouse)) {
+                self.switchTune(tune_idx);
+            }
+            tune_btn_x += 40;
+        }
+
+        // Add tune button
+        if (self.num_tunes < MAX_TUNES) {
+            if (self.fui.button(tune_btn_x, tune_y - 4, 32, 28, "+", CONF.COLOR_MENU_SECONDARY, click_mouse)) {
+                _ = self.addTune();
+            }
+        }
+
+        // Remove tune button
+        if (self.num_tunes > 1) {
+            if (self.fui.button(tune_btn_x + 40, tune_y - 4, 48, 28, "Del", CONF.COLOR_MENU_DANGER, click_mouse)) {
+                _ = self.removeCurrentTune();
+            }
+        }
+
+        // Save/Load buttons
+        if (self.fui.button(px + 700, tune_y - 4, 60, 28, "Save", CONF.COLOR_MENU_NORMAL, click_mouse)) {
+            self.saveCompositions();
+        }
+        if (self.fui.button(px + 770, tune_y - 4, 60, 28, "Load", CONF.COLOR_MENU_NORMAL, click_mouse)) {
+            self.loadCompositions();
+        }
+
+        // Show save/load status
+        if (self.save_status) |status| {
+            const status_text = switch (status) {
+                .saved => "Saved!",
+                .loaded => "Loaded!",
+                .error_save => "Save Error",
+                .error_load => "Load Error",
+            };
+            const status_color: u32 = switch (status) {
+                .saved, .loaded => CONF.COLOR_MENU_HIGHLIGHT,
+                .error_save, .error_load => CONF.COLOR_MENU_DANGER,
+            };
+            self.fui.draw_text(status_text, px + 840, tune_y, CONF.FONT_DEFAULT_SIZE, status_color);
         }
 
         const mode_str = switch (self.mode) {
@@ -201,7 +488,7 @@ pub const ComposerScene = struct {
         }
 
         // Timeline / Tracker - Grid at top
-        const timeline_y = py + 48;
+        const timeline_y = py + 80;
         self.fui.draw_text("Tracker:", px, timeline_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_MENU_TEXT);
 
         const grid_start_y = timeline_y + 28;
@@ -219,9 +506,9 @@ pub const ComposerScene = struct {
                 var color: u32 = CONF.COLOR_MENU_SECONDARY;
                 var label: [:0]const u8 = "";
 
-                if (idx < self.melody_len) {
+                if (idx < self.tunes[self.current_tune].len) {
                     // Has note
-                    const note = self.melody[idx];
+                    const note = self.tunes[self.current_tune].notes[idx];
                     if (self.audio.playing and self.audio.current_note == idx) {
                         color = CONF.COLOR_MENU_HIGHLIGHT;
                     } else {
@@ -235,14 +522,14 @@ pub const ComposerScene = struct {
                 }
 
                 if (self.fui.button(cell_x, cell_y, TIMELINE_CELL_SIZE, TIMELINE_CELL_SIZE, label, color, click_mouse)) {
-                    if (idx < self.melody_len) {
+                    if (idx < self.tunes[self.current_tune].len) {
                         // Remove note
                         self.audio.stop_tune();
                         var k = idx;
-                        while (k < self.melody_len - 1) : (k += 1) {
-                            self.melody[k] = self.melody[k + 1];
+                        while (k < self.tunes[self.current_tune].len - 1) : (k += 1) {
+                            self.tunes[self.current_tune].notes[k] = self.tunes[self.current_tune].notes[k + 1];
                         }
-                        self.melody_len -= 1;
+                        self.tunes[self.current_tune].len -= 1;
                     }
                 }
             }
@@ -267,9 +554,9 @@ pub const ComposerScene = struct {
             // Reset the selected letter
             self.selected_letter = null;
 
-            if (self.mode == .Insert and self.melody_len < MAX_NOTES) {
-                self.melody[self.melody_len] = .{ .id = AudioMod.NOTE_REST, .dur = NOTE_DURATION };
-                self.melody_len += 1;
+            if (self.mode == .Insert and self.tunes[self.current_tune].len < MAX_NOTES) {
+                self.tunes[self.current_tune].notes[self.tunes[self.current_tune].len] = .{ .id = AudioMod.NOTE_REST, .dur = NOTE_DURATION };
+                self.tunes[self.current_tune].len += 1;
             }
         }
     }
@@ -298,9 +585,9 @@ pub const ComposerScene = struct {
                 // Set this note's letter as the selected one
                 self.selected_letter = getNoteLetter(note_def.id);
 
-                if (self.mode == .Insert and self.melody_len < MAX_NOTES) {
-                    self.melody[self.melody_len] = .{ .id = note_def.id, .dur = NOTE_DURATION };
-                    self.melody_len += 1;
+                if (self.mode == .Insert and self.tunes[self.current_tune].len < MAX_NOTES) {
+                    self.tunes[self.current_tune].notes[self.tunes[self.current_tune].len] = .{ .id = note_def.id, .dur = NOTE_DURATION };
+                    self.tunes[self.current_tune].len += 1;
                 }
             }
             btn_x += 88;
@@ -312,6 +599,7 @@ pub const ComposerScene = struct {
     }
 
     pub fn deinit(self: *ComposerScene) void {
+        self.saveCompositions(); // Auto-save on exit
         self.audio.deinit();
     }
 };

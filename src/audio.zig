@@ -181,14 +181,14 @@ pub const Audio = struct {
     playing: bool,
     tune: ?Tune = null,
     current_note: usize = 0,
-    current_time: f32 = 0.0,
+    current_time: f32 = 0.0, // Time within current note slot
     sample_rate: f32 = 44100.0,
     phase: f32 = 0.0, // Phase accumulator (0.0 to 1.0)
-    note_start_time: f32 = 0.0, // Time when current note started
+    note_start_time: f32 = 0.0, // Time within current tied note group (for envelope)
     rng_state: u64 = 12345, // Random state for analog effects
     vibrato_phase: f32 = 0.0, // For vibrato LFO
     drift_phase: f32 = 0.0, // For slow drift LFO
-    current_note_id: usize = 0, // Track which note we're playing
+    current_note_id: usize = 0, // Track which note ID we're currently playing
 
     pub fn init() Audio {
         const fa_buf = std.heap.page_allocator.alloc(u8, FA_SIZE) catch unreachable;
@@ -215,26 +215,63 @@ pub const Audio = struct {
         std.heap.page_allocator.free(self.fa_buf);
     }
 
-    // Calculate envelope value (0.0 to 1.0) based on time in note
-    fn calculateEnvelope(self: *Audio, time_in_note: f32, note_dur: f32) f32 {
+    // Calculate envelope value (0.0 to 1.0) based on time in note group
+    // This accumulates across tied notes for smooth legato
+    fn calculateEnvelope(self: *Audio, time_in_note: f32, note_dur: f32, is_last_in_group: bool) f32 {
         _ = self;
+
+        // If not the last note in a tied group, we stay in sustain
+        if (!is_last_in_group) {
+            // In the middle of tied notes - stay at sustain level
+            if (time_in_note < ATTACK_TIME) {
+                return time_in_note / ATTACK_TIME;
+            } else if (time_in_note < ATTACK_TIME + DECAY_TIME) {
+                const decay_progress = (time_in_note - ATTACK_TIME) / DECAY_TIME;
+                return 1.0 - (1.0 - SUSTAIN_LEVEL) * decay_progress;
+            } else {
+                return SUSTAIN_LEVEL;
+            }
+        }
+
+        // This is the last note in the group (or a single note) - apply release
         const total_release_start = note_dur - RELEASE_TIME;
 
-        if (time_in_note < ATTACK_TIME) {
-            // Attack phase: linear ramp from 0 to 1
-            return time_in_note / ATTACK_TIME;
-        } else if (time_in_note < ATTACK_TIME + DECAY_TIME) {
-            // Decay phase: linear ramp from 1 to sustain level
-            const decay_progress = (time_in_note - ATTACK_TIME) / DECAY_TIME;
-            return 1.0 - (1.0 - SUSTAIN_LEVEL) * decay_progress;
-        } else if (time_in_note < total_release_start) {
-            // Sustain phase: constant
-            return SUSTAIN_LEVEL;
-        } else {
-            // Release phase: linear ramp to 0
+        if (time_in_note >= total_release_start) {
+            // Release phase
             const release_progress = (time_in_note - total_release_start) / RELEASE_TIME;
             return SUSTAIN_LEVEL * (1.0 - release_progress);
+        } else if (time_in_note < ATTACK_TIME) {
+            // Attack phase
+            return time_in_note / ATTACK_TIME;
+        } else if (time_in_note < ATTACK_TIME + DECAY_TIME) {
+            // Decay phase
+            const decay_progress = (time_in_note - ATTACK_TIME) / DECAY_TIME;
+            return 1.0 - (1.0 - SUSTAIN_LEVEL) * decay_progress;
+        } else {
+            // Sustain phase
+            return SUSTAIN_LEVEL;
         }
+    }
+
+    // Check if we're the last note in a tied group
+    fn isLastInTiedGroup(self: *Audio) bool {
+        if (self.tune == null) return true;
+        const current_idx = self.current_note;
+        if (current_idx + 1 >= self.tune.?.len) return true;
+        // We're last in group if next note is different
+        return self.tune.?[current_idx].id != self.tune.?[current_idx + 1].id;
+    }
+
+    // Calculate total duration of current tied note group
+    fn calculateTiedGroupDuration(self: *Audio) f32 {
+        if (self.tune == null) return 0.0;
+        const current_id = self.tune.?[self.current_note].id;
+        var total_dur: f32 = 0.0;
+        var idx = self.current_note;
+        while (idx < self.tune.?.len and self.tune.?[idx].id == current_id) : (idx += 1) {
+            total_dur += self.tune.?[idx].dur;
+        }
+        return total_dur;
     }
 
     pub fn update_audio(self: *Audio, dt: f32) void {
@@ -253,22 +290,34 @@ pub const Audio = struct {
         while (i < to_write) : (i += 1) {
             // Advance note if time is up
             if (self.current_time >= self.tune.?[self.current_note].dur) {
+                const prev_note_id = self.tune.?[self.current_note].id;
                 self.current_note += 1;
                 self.current_time = 0.0;
-                self.note_start_time = 0.0;
+
                 if (self.current_note >= self.tune.?.len) {
                     self.playing = false;
                     break;
                 }
-            }
-            const note = self.tune.?[self.current_note];
 
+                const next_note = self.tune.?[self.current_note];
+                if (next_note.id != prev_note_id) {
+                    // Different note - reset envelope for new attack
+                    self.note_start_time = 0.0;
+                    self.current_note_id = next_note.id;
+                }
+                // If same note: continue with accumulated note_start_time (legato)
+            }
+
+            const note = self.tune.?[self.current_note];
             const base_freq = NOTE_TABLE[note.id].freq;
+
             if (base_freq == 0.0) {
                 buf[i] = 0.0;
             } else {
-                // Calculate envelope
-                const envelope = self.calculateEnvelope(self.note_start_time, note.dur);
+                // Calculate envelope - check if we're in a tied group
+                const is_last = self.isLastInTiedGroup();
+                const tied_dur = self.calculateTiedGroupDuration();
+                const envelope = self.calculateEnvelope(self.note_start_time, tied_dur, is_last);
 
                 // Calculate analog pitch drift
                 self.vibrato_phase += VIBRATO_RATE / self.sample_rate;
@@ -288,8 +337,7 @@ pub const Audio = struct {
                 self.phase += mod_freq / self.sample_rate;
                 if (self.phase >= 1.0) self.phase -= 1.0;
 
-                // Generate square wave with slight filtering (band-limited-ish)
-                // Using a slightly softer square for more analog feel
+                // Generate square wave
                 const phase = self.phase;
                 var wave: f32 = if (phase < 0.5) 1.0 else -1.0;
 
@@ -298,7 +346,7 @@ pub const Audio = struct {
                 wave += noise;
 
                 // Apply envelope and output
-                buf[i] = wave * envelope * 0.4; // Slightly lower master volume
+                buf[i] = wave * envelope * 0.4;
             }
 
             self.current_time += 1.0 / self.sample_rate;
