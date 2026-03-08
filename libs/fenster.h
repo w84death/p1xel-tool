@@ -140,12 +140,18 @@ FENSTER_API int fenster_loop(struct fenster *f) {
     return 0;
   NSUInteger evtype = msg(NSUInteger, ev, "type");
   switch (evtype) {
-  case 1: /* NSEventTypeMouseDown */
-    f->mouse |= 1;
-    break;
-  case 2: /* NSEventTypeMouseUp*/
-    f->mouse &= ~1;
-    break;
+  case 1: /* NSEventTypeMouseDown */ {
+      NSInteger btn = msg(NSInteger, ev, "buttonNumber");
+      if (btn == 0) f->mouse |= 1;      /* Left button */
+      else if (btn == 1) f->mouse |= 2; /* Right button */
+      break;
+    }
+    case 2: /* NSEventTypeMouseUp*/ {
+      NSInteger btn = msg(NSInteger, ev, "buttonNumber");
+      if (btn == 0) f->mouse &= ~1;      /* Left button */
+      else if (btn == 1) f->mouse &= ~2; /* Right button */
+      break;
+    }
   case 5:
   case 6: { /* NSEventTypeMouseMoved */
     CGPoint xy = msg(CGPoint, ev, "locationInWindow");
@@ -198,10 +204,18 @@ static LRESULT CALLBACK fenster_wndproc(HWND hwnd, UINT msg, WPARAM wParam,
   case WM_CLOSE:
     DestroyWindow(hwnd);
     break;
-  case WM_LBUTTONDOWN:
-  case WM_LBUTTONUP:
-    f->mouse = (msg == WM_LBUTTONDOWN);
-    break;
+    case WM_LBUTTONDOWN:
+      f->mouse |= 1;
+      break;
+    case WM_LBUTTONUP:
+      f->mouse &= ~1;
+      break;
+    case WM_RBUTTONDOWN:
+      f->mouse |= 2;
+      break;
+    case WM_RBUTTONUP:
+      f->mouse &= ~2;
+      break;
   case WM_MOUSEMOVE:
     f->y = HIWORD(lParam), f->x = LOWORD(lParam);
     break;
@@ -302,9 +316,17 @@ FENSTER_API int fenster_loop(struct fenster *f) {
     XNextEvent(f->dpy, &ev);
     switch (ev.type) {
     case ButtonPress:
-    case ButtonRelease:
-      f->mouse = (ev.type == ButtonPress);
+    case ButtonRelease: {
+      int pressed = (ev.type == ButtonPress);
+      if (ev.xbutton.button == 1) {
+        if (pressed) f->mouse |= 1;
+        else f->mouse &= ~1;
+      } else if (ev.xbutton.button == 3) {
+        if (pressed) f->mouse |= 2;
+        else f->mouse &= ~2;
+      }
       break;
+    }
     case MotionNotify:
       f->x = ev.xmotion.x, f->y = ev.xmotion.y;
       break;
