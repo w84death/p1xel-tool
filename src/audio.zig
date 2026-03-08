@@ -152,6 +152,29 @@ extern fn fenster_audio_close(*FenAudio) void;
 
 const FA_SIZE = 8192 * @sizeOf(f32) + 64; // Approximate size for buffer + pointers
 
+// Audio synthesis parameters
+const ATTACK_TIME = 0.01; // 10ms attack
+const DECAY_TIME = 0.05; // 50ms decay to sustain level
+const SUSTAIN_LEVEL = 0.7; // 70% volume after decay
+const RELEASE_TIME = 0.05; // 50ms release
+
+// Analog warmth parameters
+const VIBRATO_RATE = 5.0; // 5 Hz vibrato
+const VIBRATO_DEPTH = 0.003; // 0.3% pitch variation
+const DRIFT_RATE = 0.5; // 0.5 Hz slow drift
+const DRIFT_DEPTH = 0.005; // 0.5% pitch variation
+const NOISE_AMOUNT = 0.02; // Small amount of noise
+
+// Simple LCG random for audio thread (deterministic but good distribution)
+fn prng(state: *u64) u64 {
+    state.* = state.* *% 6364136223846793005 +% 1;
+    return state.*;
+}
+
+fn prngFloat(state: *u64) f32 {
+    return @as(f32, @floatFromInt(prng(state) & 0xFFFFFFFF)) / @as(f32, 4294967296.0);
+}
+
 pub const Audio = struct {
     fa_ptr: *FenAudio,
     fa_buf: []u8,
@@ -160,7 +183,13 @@ pub const Audio = struct {
     current_note: usize = 0,
     current_time: f32 = 0.0,
     sample_rate: f32 = 44100.0,
-    u: usize = 0, // for phase or counter
+    phase: f32 = 0.0, // Phase accumulator (0.0 to 1.0)
+    note_start_time: f32 = 0.0, // Time when current note started
+    rng_state: u64 = 12345, // Random state for analog effects
+    vibrato_phase: f32 = 0.0, // For vibrato LFO
+    drift_phase: f32 = 0.0, // For slow drift LFO
+    current_note_id: usize = 0, // Track which note we're playing
+
     pub fn init() Audio {
         const fa_buf = std.heap.page_allocator.alloc(u8, FA_SIZE) catch unreachable;
         const fa = @as(*FenAudio, @ptrCast(fa_buf.ptr));
@@ -173,13 +202,41 @@ pub const Audio = struct {
             .current_note = 0,
             .current_time = 0.0,
             .sample_rate = 44100.0,
-            .u = 0,
+            .phase = 0.0,
+            .note_start_time = 0.0,
+            .rng_state = 12345,
+            .vibrato_phase = 0.0,
+            .drift_phase = 0.0,
+            .current_note_id = 0,
         };
     }
     pub fn deinit(self: *Audio) void {
         fenster_audio_close(self.fa_ptr);
         std.heap.page_allocator.free(self.fa_buf);
     }
+
+    // Calculate envelope value (0.0 to 1.0) based on time in note
+    fn calculateEnvelope(self: *Audio, time_in_note: f32, note_dur: f32) f32 {
+        _ = self;
+        const total_release_start = note_dur - RELEASE_TIME;
+
+        if (time_in_note < ATTACK_TIME) {
+            // Attack phase: linear ramp from 0 to 1
+            return time_in_note / ATTACK_TIME;
+        } else if (time_in_note < ATTACK_TIME + DECAY_TIME) {
+            // Decay phase: linear ramp from 1 to sustain level
+            const decay_progress = (time_in_note - ATTACK_TIME) / DECAY_TIME;
+            return 1.0 - (1.0 - SUSTAIN_LEVEL) * decay_progress;
+        } else if (time_in_note < total_release_start) {
+            // Sustain phase: constant
+            return SUSTAIN_LEVEL;
+        } else {
+            // Release phase: linear ramp to 0
+            const release_progress = (time_in_note - total_release_start) / RELEASE_TIME;
+            return SUSTAIN_LEVEL * (1.0 - release_progress);
+        }
+    }
+
     pub fn update_audio(self: *Audio, dt: f32) void {
         _ = dt;
         if (!self.playing or self.tune == null) return;
@@ -195,29 +252,57 @@ pub const Audio = struct {
 
         while (i < to_write) : (i += 1) {
             // Advance note if time is up
-            var note = self.tune.?[self.current_note];
-            if (self.current_time >= note.dur) {
+            if (self.current_time >= self.tune.?[self.current_note].dur) {
                 self.current_note += 1;
                 self.current_time = 0.0;
+                self.note_start_time = 0.0;
                 if (self.current_note >= self.tune.?.len) {
                     self.playing = false;
                     break;
                 }
-                note = self.tune.?[self.current_note];
             }
+            const note = self.tune.?[self.current_note];
 
-            const freq = NOTE_TABLE[note.id].freq;
-            if (freq == 0.0) {
+            const base_freq = NOTE_TABLE[note.id].freq;
+            if (base_freq == 0.0) {
                 buf[i] = 0.0;
             } else {
-                const phase_step: u32 = @intFromFloat(freq * 65536.0 / self.sample_rate);
-                self.u += phase_step;
-                const phase_bit = (self.u >> 16) & 1;
-                const wave = if (phase_bit == 0) @as(f32, 1.0) else @as(f32, -1.0);
-                buf[i] = wave * 0.5;
+                // Calculate envelope
+                const envelope = self.calculateEnvelope(self.note_start_time, note.dur);
+
+                // Calculate analog pitch drift
+                self.vibrato_phase += VIBRATO_RATE / self.sample_rate;
+                if (self.vibrato_phase > 1.0) self.vibrato_phase -= 1.0;
+
+                self.drift_phase += DRIFT_RATE / self.sample_rate;
+                if (self.drift_phase > 1.0) self.drift_phase -= 1.0;
+
+                // Sine-based LFOs for smooth pitch variation
+                const vibrato = @sin(self.vibrato_phase * 2.0 * std.math.pi) * VIBRATO_DEPTH;
+                const drift = @sin(self.drift_phase * 2.0 * std.math.pi) * DRIFT_DEPTH;
+
+                // Modulated frequency
+                const mod_freq = base_freq * (1.0 + vibrato + drift);
+
+                // Advance phase
+                self.phase += mod_freq / self.sample_rate;
+                if (self.phase >= 1.0) self.phase -= 1.0;
+
+                // Generate square wave with slight filtering (band-limited-ish)
+                // Using a slightly softer square for more analog feel
+                const phase = self.phase;
+                var wave: f32 = if (phase < 0.5) 1.0 else -1.0;
+
+                // Add slight noise for analog character
+                const noise = (prngFloat(&self.rng_state) - 0.5) * NOISE_AMOUNT;
+                wave += noise;
+
+                // Apply envelope and output
+                buf[i] = wave * envelope * 0.4; // Slightly lower master volume
             }
 
             self.current_time += 1.0 / self.sample_rate;
+            self.note_start_time += 1.0 / self.sample_rate;
         }
 
         // Write to audio
@@ -229,6 +314,11 @@ pub const Audio = struct {
         self.tune = tune;
         self.current_note = 0;
         self.current_time = 0.0;
+        self.note_start_time = 0.0;
+        self.phase = 0.0;
+        self.vibrato_phase = 0.0;
+        self.drift_phase = 0.0;
+        self.current_note_id = 0;
         self.playing = true;
     }
     pub fn stop_tune(self: *Audio) void {
