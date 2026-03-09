@@ -16,6 +16,8 @@ const Popup = enum {
     info_not_implemented,
     info_save_ok,
     info_save_fail,
+    info_export_ok,
+    info_export_fail,
     confirm_delete,
 };
 
@@ -44,6 +46,50 @@ pub const TilesetScene = struct {
             .popup = Popup.none,
         };
     }
+    pub fn exportTilesetToPPM(self: *const TilesetScene) !void {
+        const tiles_in_row: usize = 16;
+        const sprite_size = CONF.SPRITE_SIZE;
+        const width: usize = tiles_in_row * sprite_size;
+        const height: usize = ((CONF.MAX_TILES + tiles_in_row - 1) / tiles_in_row) * sprite_size;
+
+        const file = try std.fs.cwd().createFile("tileset.ppm", .{});
+        defer file.close();
+
+        var buffer: [8192]u8 = undefined;
+        var fwrite = file.writer(&buffer);
+        const writer = &fwrite.interface;
+
+        try writer.print("P6\n{d} {d}\n255\n", .{ width, height });
+
+        for (0..height) |py| {
+            const tile_y: usize = py / sprite_size;
+            const pixel_y: usize = py % sprite_size;
+            for (0..width) |px| {
+                const tile_x: usize = px / sprite_size;
+                const pixel_x: usize = px % sprite_size;
+                const tile_index: usize = tile_y * tiles_in_row + tile_x;
+
+                var color: u32 = 0xFF000000;
+                if (tile_index < self.tiles.count) {
+                    const tile = self.tiles.db[tile_index];
+                    const palette_idx = tile.data[pixel_y][pixel_x];
+                    if (palette_idx < 4) {
+                        color = tile.pal32[palette_idx];
+                    }
+                }
+
+                const r: u8 = @intCast((color >> 16) & 0xFF);
+                const g: u8 = @intCast((color >> 8) & 0xFF);
+                const b: u8 = @intCast(color & 0xFF);
+
+                try writer.writeByte(r);
+                try writer.writeByte(g);
+                try writer.writeByte(b);
+            }
+        }
+        try writer.flush();
+    }
+
     pub fn draw(self: *TilesetScene, mouse: Mouse) !void {
 
         // Navigation (top)
@@ -125,6 +171,15 @@ pub const TilesetScene = struct {
                 self.popup = Popup.info_save_fail;
             }
         }
+        tools_step += 228;
+        if (self.fui.button(tools_step, tools.y, 220, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
+            self.nav.locked = true;
+            self.exportTilesetToPPM() catch {
+                self.popup = Popup.info_export_fail;
+                return;
+            };
+            self.popup = Popup.info_export_ok;
+        }
 
         // Stats panel
         const stats_x = self.fui.pivots[PIVOTS.TOP_RIGHT].x - 256;
@@ -158,6 +213,24 @@ pub const TilesetScene = struct {
                 },
                 Popup.info_save_fail => {
                     if (self.fui.info_popup("File saving failed...", mouse, CONF.COLOR_NO)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.nav.locked = false;
+                            self.sm.hot = true;
+                        }
+                    }
+                },
+                Popup.info_export_ok => {
+                    if (self.fui.info_popup("Exported tileset.ppm!", mouse, CONF.COLOR_OK)) |dismissed| {
+                        if (dismissed) {
+                            self.popup = Popup.none;
+                            self.nav.locked = false;
+                            self.sm.hot = true;
+                        }
+                    }
+                },
+                Popup.info_export_fail => {
+                    if (self.fui.info_popup("Export failed...", mouse, CONF.COLOR_NO)) |dismissed| {
                         if (dismissed) {
                             self.popup = Popup.none;
                             self.nav.locked = false;
