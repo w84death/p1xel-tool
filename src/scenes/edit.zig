@@ -57,6 +57,7 @@ pub const EditScene = struct {
     tool: Tools = Tools.pixel,
     line_start: ?Vec2 = null,
     prev_mouse_pressed: bool = false,
+    prev_right_mouse_pressed: bool = false,
     status_buffer: [256]u8 = undefined,
     bg_type: BackgroundType = BackgroundType.dark,
 
@@ -83,6 +84,7 @@ pub const EditScene = struct {
             .tool = Tools.pixel,
             .line_start = null,
             .prev_mouse_pressed = false,
+            .prev_right_mouse_pressed = false,
             .bg_type = BackgroundType.dark,
         };
     }
@@ -168,6 +170,16 @@ pub const EditScene = struct {
             }
         }
 
+        // Right mouse button: erase (draw color 0)
+        if (mouse.right_pressed) {
+            if (mouse_cell_x >= 0 and mouse_cell_x < CONF.SPRITE_SIZE and
+                mouse_cell_y >= 0 and mouse_cell_y < CONF.SPRITE_SIZE)
+            {
+                self.canvas.data[@intCast(mouse_cell_y)][@intCast(mouse_cell_x)] = 0;
+                self.needs_saving = true;
+            }
+        }
+
         var status_buf: [64:0]u8 = undefined;
         if (mouse_cell_x >= 0 and mouse_cell_x < CONF.SPRITE_SIZE and
             mouse_cell_y >= 0 and mouse_cell_y < CONF.SPRITE_SIZE)
@@ -176,6 +188,7 @@ pub const EditScene = struct {
             self.fui.draw_text(&status_buf, self.canvas.x, self.canvas.y + CONF.SPRITE_SIZE * CONF.GRID_SIZE + 8, CONF.FONT_DEFAULT_SIZE, DB16.WHITE);
         }
         self.prev_mouse_pressed = mouse.pressed;
+        self.prev_right_mouse_pressed = mouse.right_pressed;
     }
 
     fn draw_line_on_canvas(self: *EditScene, start: Vec2, end: Vec2, color: u8) void {

@@ -36,6 +36,8 @@ pub fn main() void {
     defer c.fenster_close(&f);
     var mouse_pressed = false;
     var mouse_lock = false;
+    var right_mouse_pressed = false;
+    var right_mouse_lock = false;
     var fui = Fui.init(&buf);
     var sm = StateMachine.init(State.main_menu);
     var nav = NavPanel.init(fui, &sm);
@@ -71,19 +73,32 @@ pub fn main() void {
             else => {},
         }
 
-        if (mouse_lock and mouse_pressed and f.mouse == 0) {
+        if (mouse_lock and mouse_pressed and (f.mouse & 1) == 0) {
             mouse_pressed = false;
             mouse_lock = false;
-        } else if (!mouse_lock and !mouse_pressed and f.mouse == 1) {
+        } else if (!mouse_lock and !mouse_pressed and (f.mouse & 1) != 0) {
             mouse_pressed = true;
             mouse_lock = true;
-        } else if (mouse_lock and !mouse_pressed and f.mouse == 0) {
+        } else if (mouse_lock and !mouse_pressed and (f.mouse & 1) == 0) {
             mouse_pressed = false;
             mouse_lock = false;
         } else {
             mouse_pressed = false;
         }
-        const mouse = Mouse.init(f.x, f.y, mouse_pressed);
+
+        if (right_mouse_lock and right_mouse_pressed and (f.mouse & 2) == 0) {
+            right_mouse_pressed = false;
+            right_mouse_lock = false;
+        } else if (!right_mouse_lock and !right_mouse_pressed and (f.mouse & 2) != 0) {
+            right_mouse_pressed = true;
+            right_mouse_lock = true;
+        } else if (right_mouse_lock and !right_mouse_pressed and (f.mouse & 2) == 0) {
+            right_mouse_pressed = false;
+            right_mouse_lock = false;
+        } else {
+            right_mouse_pressed = false;
+        }
+        const mouse = Mouse.init(f.x, f.y, mouse_pressed, right_mouse_pressed);
 
         switch (sm.current) {
             State.main_menu => {

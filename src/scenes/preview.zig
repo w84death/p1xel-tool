@@ -98,6 +98,19 @@ pub const PreviewScene = struct {
                 }
             }
         }
+
+        // Right mouse button: remove tile
+        if (mouse.right_pressed) {
+            if (mouse_cell_x >= 0 and mouse_cell_x < CONF.PREVIEW_W and
+                mouse_cell_y >= 0 and mouse_cell_y < CONF.PREVIEW_H)
+            {
+                const data_y: i32 = tentative_data_y;
+                const data_x: i32 = mouse_cell_x + @as(i32, @intCast(self.cam_x));
+                if (data_y >= 0 and data_y < CONF.MAX_PREVIEW_H and data_x >= 0 and data_x < CONF.MAX_PREVIEW_W) {
+                    self.layers[self.selected].data[@intCast(data_y)][@intCast(data_x)] = 255;
+                }
+            }
+        }
     }
     pub fn handle_keyboard(self: *PreviewScene, keys: *[256]c_int) void {
         if (self.locked) return;

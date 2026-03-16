@@ -1,6 +1,7 @@
 const std = @import("std");
 const Vec2 = @import("../math.zig").Vec2;
 const Mouse = @import("../math.zig").Mouse;
+const Rect = @import("../math.zig").Rect;
 const CONF = @import("../config.zig").CONF;
 const DB16 = @import("../palette.zig").DB16;
 const Palette = @import("../palette.zig").Palette;
@@ -32,6 +33,7 @@ pub const TilesetScene = struct {
     needs_saving: bool,
     locked: bool,
     popup: Popup,
+    prev_right_mouse_pressed: bool = false,
     pub fn init(fui: Fui, sm: *StateMachine, nav: *NavPanel, pal: *Palette, tiles: *Tiles, edit: *Edit) TilesetScene {
         return TilesetScene{
             .fui = fui,
@@ -124,6 +126,24 @@ pub const TilesetScene = struct {
                 }
             }
         }
+
+        // Right mouse button: delete tile
+        if (mouse.right_pressed and !self.prev_right_mouse_pressed and !self.nav.locked) {
+            inline for (0..CONF.MAX_TILES) |i| {
+                const x_shift: i32 = @intCast(@mod(i, tiles_in_row) * (CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 4));
+                const x: i32 = t_pos.x + x_shift;
+                const y: i32 = @divFloor(i, tiles_in_row) * (CONF.SPRITE_SIZE * CONF.PREVIEW_SCALE + 4);
+                if (i < self.tiles.count) {
+                    if (self.fui.check_hover(mouse, Rect.init(size, size, x, t_pos.y + y))) {
+                        self.tiles.selected = i;
+                        self.nav.locked = true;
+                        self.popup = Popup.confirm_delete;
+                        break;
+                    }
+                }
+            }
+        }
+        self.prev_right_mouse_pressed = mouse.right_pressed;
 
         const tools: Vec2 = Vec2.init(self.fui.pivots[PIVOTS.BOTTOM_LEFT].x, self.fui.pivots[PIVOTS.BOTTOM_LEFT].y - 32);
         var tools_step = tools.x;
