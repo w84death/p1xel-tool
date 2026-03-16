@@ -145,6 +145,43 @@ pub const TilesetScene = struct {
         }
         self.prev_right_mouse_pressed = mouse.right_pressed;
 
+        // options (top-right vertical menu)
+        const options_x: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].x;
+        var options_y: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 64;
+
+        if (self.fui.button(options_x - 160, options_y, 160, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
+            self.nav.locked = true;
+            self.tiles.save_tileset_to_file() catch {
+                self.popup = Popup.info_save_fail;
+                return;
+            };
+            self.popup = Popup.info_save_ok;
+        }
+        options_y += 40;
+        if (self.fui.button(options_x - 180, options_y, 180, 32, "Export ASM", CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
+            self.nav.locked = true;
+            if (self.tiles.export_asm()) |_| {
+                self.popup = Popup.info_save_ok;
+            } else |_| {
+                self.popup = Popup.info_save_fail;
+            }
+        }
+        options_y += 40;
+        if (self.fui.button(options_x - 180, options_y, 180, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
+            self.nav.locked = true;
+            self.exportTilesetToPPM() catch {
+                self.popup = Popup.info_export_fail;
+                return;
+            };
+            self.popup = Popup.info_export_ok;
+        }
+        options_y += 48;
+        // Stats
+        var stats_buf: [16:0]u8 = undefined;
+        _ = std.fmt.bufPrintZ(&stats_buf, "Tiles: {d}", .{self.tiles.count}) catch {};
+        self.fui.draw_text(&stats_buf, options_x - 180, options_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+
+        // Tools (bottom)
         const tools: Vec2 = Vec2.init(self.fui.pivots[PIVOTS.BOTTOM_LEFT].x, self.fui.pivots[PIVOTS.BOTTOM_LEFT].y - 32);
         var tools_step = tools.x;
 
@@ -173,41 +210,6 @@ pub const TilesetScene = struct {
             self.nav.locked = true;
             self.popup = Popup.confirm_delete;
         }
-        tools_step += 188;
-        if (self.fui.button(tools_step, tools.y, 180, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
-            self.nav.locked = true;
-            self.tiles.save_tileset_to_file() catch {
-                self.popup = Popup.info_save_fail;
-                return;
-            };
-            self.popup = Popup.info_save_ok;
-        }
-        tools_step += 188;
-        if (self.fui.button(tools_step, tools.y, 220, 32, "Export ASM", CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
-            self.nav.locked = true;
-            if (self.tiles.export_asm()) |_| {
-                self.popup = Popup.info_save_ok;
-            } else |_| {
-                self.popup = Popup.info_save_fail;
-            }
-        }
-        tools_step += 228;
-        if (self.fui.button(tools_step, tools.y, 220, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.nav.locked) {
-            self.nav.locked = true;
-            self.exportTilesetToPPM() catch {
-                self.popup = Popup.info_export_fail;
-                return;
-            };
-            self.popup = Popup.info_export_ok;
-        }
-
-        // Stats panel
-        const stats_x = self.fui.pivots[PIVOTS.TOP_RIGHT].x - 256;
-        const stats_y = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 128;
-        self.fui.draw_rect(stats_x, stats_y, 200, 40, CONF.COLOR_MENU_NORMAL);
-        var stats_buf: [12:0]u8 = undefined;
-        _ = std.fmt.bufPrintZ(&stats_buf, "Tiles: {d} ", .{self.tiles.count}) catch {};
-        self.fui.draw_text(&stats_buf, stats_x + 10, stats_y + 10, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
 
         // Popups
         if (self.popup != Popup.none) {

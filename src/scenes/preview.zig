@@ -36,6 +36,7 @@ pub const PreviewScene = struct {
     cam_y: usize = 0,
     locked: bool,
     iso_mode: bool = false,
+    needs_saving: bool = false,
     popup: Popup,
     pub fn init(fui: Fui, sm: *StateMachine, nav: *NavPanel, edit: *Edit, pal: *Palette, tiles: *Tiles, layers: *[CONF.PREVIEW_LAYERS]Layer) PreviewScene {
         for (0..CONF.PREVIEW_LAYERS) |i| {
@@ -95,6 +96,7 @@ pub const PreviewScene = struct {
                     var data = self.layers[self.selected].data[@intCast(data_y)][@intCast(data_x)];
                     data = if (data == self.tiles.selected) 255 else self.tiles.selected;
                     self.layers[self.selected].data[@intCast(data_y)][@intCast(data_x)] = data;
+                    self.needs_saving = true;
                 }
             }
         }
@@ -108,6 +110,7 @@ pub const PreviewScene = struct {
                 const data_x: i32 = mouse_cell_x + @as(i32, @intCast(self.cam_x));
                 if (data_y >= 0 and data_y < CONF.MAX_PREVIEW_H and data_x >= 0 and data_x < CONF.MAX_PREVIEW_W) {
                     self.layers[self.selected].data[@intCast(data_y)][@intCast(data_x)] = 255;
+                    self.needs_saving = true;
                 }
             }
         }
@@ -264,20 +267,46 @@ pub const PreviewScene = struct {
         // Navigation (top)
         self.nav.draw(mouse);
 
-        // options
+        // options (top-right vertical menu)
         const options_x: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].x;
-        const options_y: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 64;
+        var options_y: i32 = self.fui.pivots[PIVOTS.TOP_RIGHT].y + 64;
 
-        if (self.fui.button(options_x - 160, options_y, 160, CONF.MAX_PREVIEW_W, "Save", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        // ISO toggle
+        if (self.fui.button(options_x - 160, options_y, 160, 32, if (self.iso_mode) "ISO: ON" else "ISO: OFF", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.iso_mode = !self.iso_mode;
+        }
+        options_y += 48;
+
+        // Movement controls
+        self.fui.draw_text("Move:", options_x - 160, options_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        options_y += 24;
+
+        if (self.fui.button(options_x - 80 - 65, options_y, 120, 32, "North", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.move_camera(0, -1);
+        }
+        if (self.fui.button(options_x - 80 - 65, options_y + 80, 120, 32, "South", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.move_camera(0, 1);
+        }
+        if (self.fui.button(options_x - 80 - 65 - 65, options_y + 40, 120, 32, "Left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.move_camera(-1, 0);
+        }
+        if (self.fui.button(options_x - 80 - 65 + 65, options_y + 40, 120, 32, "Right", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+            self.move_camera(1, 0);
+        }
+        options_y += 120;
+
+        // Save/Export
+        if (self.fui.button(options_x - 160, options_y, 160, 32, "Save", if (self.needs_saving) CONF.COLOR_MENU_HIGHLIGHT else CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.savePreviewToFile() catch {
                 self.popup = Popup.info_save_fail;
                 return;
             };
             self.popup = Popup.info_save_ok;
+            self.needs_saving = false;
         }
-
-        if (self.fui.button(options_x - 160, options_y + 40, 160, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
+        options_y += 40;
+        if (self.fui.button(options_x - 160, options_y, 160, 32, "Export PPM", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
             self.locked = true;
             self.exportPreviewToPPM() catch {
                 self.popup = Popup.info_export_fail;
@@ -286,34 +315,6 @@ pub const PreviewScene = struct {
             self.popup = Popup.info_export_ok;
         }
 
-        if (self.fui.button(options_x - 160, options_y + 80, 160, 32, if (self.iso_mode) "ISO: ON" else "ISO: OFF", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.iso_mode = !self.iso_mode;
-        }
-
-        const tools_x = options_x - 120;
-        const tools_y = options_y + 124;
-
-        self.fui.draw_text("Move:", tools_x - 40, tools_y - 24, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
-
-        if (self.fui.button(tools_x - 60, tools_y, 120, 32, "North", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.move_camera(0, -1);
-        }
-        if (self.fui.button(tools_x - 60, tools_y + 80, 120, 32, "Shouth", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.move_camera(0, 1);
-        }
-        if (self.fui.button(tools_x - 60 - 65, tools_y + 40, 120, 32, "Left", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.move_camera(-1, 0);
-        }
-        if (self.fui.button(tools_x - 60 + 65, tools_y + 40, 120, 32, "Right", CONF.COLOR_MENU_NORMAL, mouse) and !self.locked) {
-            self.move_camera(1, 0);
-        }
-
-        // tools_step += 88;
-        // if (self.fui.button(tools_step, tools.y, 120, 32, "Clear layer", CONF.COLOR_MENU_DANGER, mouse) and !self.locked) {
-        //     self.locked = true;
-        //     self.popup = Popup.info_not_implemented;
-        // }
-        //
         // Tile
 
         const tx: i32 = self.tiles_area.x - 72;
